@@ -1,0 +1,1357 @@
+<html lang="zh-TW" style="background-color: transparent;"><head>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.13/html-to-image.min.js" integrity="sha512-iZ2ORl595Wx6miw+GuadDet4WQbdSWS3JLMoNfY8cRGoEFy6oT3G9IbcrBeL6AfkgpA51ETt/faX6yLV+/gFJg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script>
+(function() {
+// Capture host references before any artifact code runs: Window.parent
+// is [Replaceable] (a top-level `var parent` in artifact code would
+// replace the accessor with a data property), and a top-level
+// `const crypto` would shadow the global — either would otherwise
+// silently break the bridge for artifacts that worked before.
+const realParent = window.parent;
+const cryptoObj = window.crypto;
+// crypto.randomUUID exists only in Secure Contexts; fall back to a
+// unique non-crypto id elsewhere (http://LAN-IP dev flows) —
+// uniqueness is what the bridge needs, unpredictability is
+// defense-in-depth on top of the source guards.
+const newRequestId =
+cryptoObj && typeof cryptoObj.randomUUID === "function"
+? function () { return cryptoObj.randomUUID(); }
+: function () { return Date.now() + "-" + Math.random(); };
+const originalConsole = window.console;
+window.console = {
+log: (...args) => {
+originalConsole.log(...args);
+realParent.postMessage({ type: 'console', message: args.join(' ') }, '*');
+},
+error: (...args) => {
+originalConsole.error(...args);
+realParent.postMessage({ type: 'console', message: 'Error: ' + args.join(' ') }, '*');
+},
+warn: (...args) => {
+originalConsole.warn(...args);
+realParent.postMessage({ type: 'console', message: 'Warning: ' + args.join(' ') }, '*');
+}
+};
+
+// Bridge request ids are crypto-random (not sequential) so they
+// cannot be predicted by other frames in the tab.
+let callbacksMap = new Map();
+let streamControllers = new Map();
+
+window.claude = {
+complete: (prompt) => {
+return new Promise((resolve, reject) => {
+const id = newRequestId();
+callbacksMap.set(id, { resolve, reject });
+realParent.postMessage({ type: 'claudeComplete', id, prompt }, '*');
+});
+}
+};
+
+window.storage = {
+get: (key, shared = false) => {
+return new Promise((resolve, reject) => {
+const id = newRequestId();
+callbacksMap.set(id, { resolve, reject });
+realParent.postMessage({ type: 'storageGet', id, key, shared }, '*');
+});
+},
+set: (key, value, shared = false) => {
+return new Promise((resolve, reject) => {
+const id = newRequestId();
+callbacksMap.set(id, { resolve, reject });
+realParent.postMessage({ type: 'storageSet', id, key, value, shared }, '*');
+});
+},
+delete: (key, shared = false) => {
+return new Promise((resolve, reject) => {
+const id = newRequestId();
+callbacksMap.set(id, { resolve, reject });
+realParent.postMessage({ type: 'storageDelete', id, key, shared }, '*');
+});
+},
+list: (prefix, shared = false) => {
+return new Promise((resolve, reject) => {
+const id = newRequestId();
+callbacksMap.set(id, { resolve, reject });
+realParent.postMessage({ type: 'storageList', id, prefix, shared }, '*');
+});
+}
+};
+
+let pendingBlobs = new Map();
+URL.createObjectURL = (blob) => {
+// Store the blob and create an ID and URL for it
+const blobId = `blob-${Date.now()}-${Math.random()}`;
+pendingBlobs.set(blobId, blob);
+return `blob-request://${blobId}`;
+};
+
+URL.revokeObjectURL = (url) => {
+// Remove the blob from our store
+const blobId = url.replace("blob-request://", "");
+pendingBlobs.delete(blobId);
+};
+
+const getBlobFromURL = (url) => {
+const blobId = url.replace("blob-request://", "");
+return pendingBlobs.get(blobId);
+};
+
+// Override global fetch with streaming support
+window.fetch = (url, init = {}) => {
+return new Promise((resolve, reject) => {
+const id = newRequestId();
+const channelId = `fetch-${id}-${Date.now()}`;
+
+callbacksMap.set(id, { 
+resolve: (response) => {
+// Null-body statuses: Response(stream, {status: 204}) throws
+// per the Fetch spec, which would escape this resolver and
+// hang the artifact's await forever.
+if (response.status === 204 || response.status === 205 || response.status === 304) {
+try {
+resolve(new Response(null, {
+status: response.status,
+statusText: response.statusText,
+headers: response.headers
+}));
+} catch (err) {
+// Invalid statusText/header bytes can throw here too.
+reject(new TypeError(
+'Bridge fetch: unconstructable response (status ' + response.status + ')'
+));
+}
+return;
+}
+// Create a ReadableStream for the response body
+const stream = new ReadableStream({
+start(controller) {
+streamControllers.set(channelId, controller);
+},
+cancel() {
+streamControllers.delete(channelId);
+}
+});
+
+// Create and return the Response with the stream. Response()
+// requires status in [200, 599]; an opaque/no-cors fetch
+// forwards status 0, which would throw here and escape the
+// resolver, hanging the artifact's await. Surface it as a
+// network-error-shaped rejection instead.
+try {
+resolve(new Response(stream, {
+status: response.status,
+statusText: response.statusText,
+headers: response.headers
+}));
+} catch (err) {
+streamControllers.delete(channelId);
+reject(new TypeError(
+'Bridge fetch: unconstructable response (status ' + response.status + ')'
+));
+}
+},
+reject,
+channelId
+});
+
+realParent.postMessage({
+type: 'proxyFetch',
+id,
+url,
+init,
+channelId
+}, '*');
+});
+};
+
+window.addEventListener('message', async (event) => {
+// Only the embedding parent may drive the bridge — sibling and
+// nested frames can also postMessage into this window.
+if (event.source !== realParent) return;
+if (event.data.type === 'takeScreenshot') {
+// Echo the request's nonce so the requester can correlate the
+// reply to ITS request — a reply without the expected nonce
+// (e.g. from a stale pre-remount artifact) is ignored upstream.
+const screenshotNonce = event.data.nonce;
+const rootElement = document.getElementById('artifacts-component-root-html');
+if (!rootElement) {
+realParent.postMessage({
+type: 'screenshotError',
+nonce: screenshotNonce,
+error: new Error('Root element not found'),
+}, '*');
+return;
+}
+// Catch CDN load failures (htmlToImage undefined) and toPng errors
+// so the parent always gets a response instead of hanging forever.
+try {
+const screenshot = await htmlToImage.toPng(rootElement, {
+imagePlaceholder:
+"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAAXNSR0IArs4c6QAAAA1JREFUGFdjePDgwX8ACOQDoNsk0PMAAAAASUVORK5CYII=",
+});
+realParent.postMessage({
+type: 'screenshotData',
+nonce: screenshotNonce,
+data: screenshot,
+}, '*');
+} catch (err) {
+realParent.postMessage({
+type: 'screenshotError',
+nonce: screenshotNonce,
+error: err instanceof Error ? err : new Error(String(err)),
+}, '*');
+}
+} else if (event.data.type === 'claudeComplete') {
+const callback = callbacksMap.get(event.data.id);
+if (!callback) return;
+if (event.data.error) {
+callback.reject(new Error(event.data.error));
+} else {
+callback.resolve(event.data.completion);
+}
+callbacksMap.delete(event.data.id);
+} else if (event.data.type === 'proxyFetchResponse') {
+const callback = callbacksMap.get(event.data.id);
+if (!callback) return;
+if (event.data.error) {
+callback.reject(new Error(event.data.error));
+callbacksMap.delete(event.data.id);
+} else {
+// Initial response with headers, status, etc.
+callback.resolve({
+status: event.data.status,
+statusText: event.data.statusText,
+headers: event.data.headers
+});
+// Don't delete the callback yet if streaming
+if (!event.data.body) {
+callbacksMap.delete(event.data.id);
+}
+}
+} else if (event.data.type === 'proxyFetchStream') {
+// Handle streaming data chunks
+const controller = streamControllers.get(event.data.channelId);
+if (controller) {
+if (event.data.error) {
+controller.error(new Error(event.data.error));
+streamControllers.delete(event.data.channelId);
+} else if (event.data.done) {
+controller.close();
+streamControllers.delete(event.data.channelId);
+// Clean up the callback
+const callback = Array.from(callbacksMap.entries()).find(
+([_, value]) => value.channelId === event.data.channelId
+);
+if (callback) {
+callbacksMap.delete(callback[0]);
+}
+} else if (event.data.chunk) {
+controller.enqueue(new Uint8Array(event.data.chunk));
+}
+}
+} else if (event.data.type === 'storageGet') {
+const callback = callbacksMap.get(event.data.id);
+if (!callback) return;
+if (event.data.error) {
+callback.reject(new Error(event.data.error));
+} else {
+callback.resolve(event.data.result);
+}
+callbacksMap.delete(event.data.id);
+} else if (event.data.type === 'storageSet') {
+const callback = callbacksMap.get(event.data.id);
+if (!callback) return;
+if (event.data.error) {
+callback.reject(new Error(event.data.error));
+} else {
+callback.resolve(event.data.result);
+}
+callbacksMap.delete(event.data.id);
+} else if (event.data.type === 'storageDelete') {
+const callback = callbacksMap.get(event.data.id);
+if (!callback) return;
+if (event.data.error) {
+callback.reject(new Error(event.data.error));
+} else {
+callback.resolve(event.data.result);
+}
+callbacksMap.delete(event.data.id);
+} else if (event.data.type === 'storageList') {
+const callback = callbacksMap.get(event.data.id);
+if (!callback) return;
+if (event.data.error) {
+callback.reject(new Error(event.data.error));
+} else {
+callback.resolve(event.data.result);
+}
+callbacksMap.delete(event.data.id);
+}
+});
+
+window.addEventListener('click', (event) => {
+const isEl = event.target instanceof HTMLElement;
+if (!isEl) return;
+
+// find ancestor links
+const linkEl = event.target.closest("a");
+if (!linkEl || !linkEl.href) return;
+
+event.preventDefault();
+event.stopImmediatePropagation();
+
+if (linkEl.href.startsWith("blob-request:")) {
+const blob = getBlobFromURL(linkEl.href);
+if (!blob) return;
+void blob.arrayBuffer().then((data) => {
+realParent.postMessage({
+type: "downloadFile",
+filename: linkEl.download,
+data,
+mimeType: blob.type || "application/octet-stream",
+});
+});
+} else if (linkEl.href.startsWith("data:")) {
+const [header, base64Data] = linkEl.href.split(",");
+const mimeMatch = header.match(/data:([^;]+)/);
+const mimeType = mimeMatch ? mimeMatch[1] : "application/octet-stream";
+const binaryString = atob(base64Data);
+const data = Uint8Array.from(binaryString, (c) =>
+c.charCodeAt(0),
+).buffer;
+realParent.postMessage({
+type: "downloadFile",
+filename: linkEl.download,
+data,
+mimeType,
+});
+} else {
+let linkUrl;
+try {
+linkUrl = new URL(linkEl.href);
+} catch (error) {
+return;
+}
+
+if (linkUrl.hostname === window.location.hostname) return;
+
+realParent.postMessage({
+type: 'openExternal',
+href: linkEl.href,
+}, '*');
+}
+});
+
+const originalOpen = window.open;
+window.open = function (url) {
+realParent.postMessage({
+type: "openExternal",
+href: url,
+}, "*");
+};
+
+window.addEventListener('error', (event) => {
+realParent.postMessage({ type: 'console', message: 'Uncaught Error: ' + event.message }, '*');
+});
+})();
+</script>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>年度復盤</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;400;600;900&amp;family=Playfair+Display:wght@400;700;900&amp;display=swap" rel="stylesheet">
+<style>
+:root{
+--bg:#F2EDE6;--card:#FAF7F3;--border:#E0D8CF;--header:#C9BFB6;
+--ink:#3A312C;--soft:#7A6E67;--muted:#B0A69E;--accent:#8C7B6E;
+--gold:#9B8579;--gold-pale:#EDE3DC;--green:#4A7C59;--red:#8B3030;
+--shadow:rgba(58,49,44,0.10);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{font-family:'Noto Serif TC',serif;background:var(--bg);color:var(--ink);overflow-x:hidden;font-size:15px;}
+.page{display:none;min-height:100vh;flex-direction:column;}
+.page.active{display:flex;}
+
+.top-bar{background:var(--header);padding:1.3rem 1.5rem;display:flex;align-items:center;gap:1rem;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;}
+.top-back{width:32px;height:32px;border:1px solid rgba(58,49,44,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1rem;color:var(--ink);transition:all .22s;flex-shrink:0;}
+.top-back:hover{background:var(--ink);color:var(--card);}
+.top-title{font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--ink);flex:1;}
+.top-badge{font-size:.67rem;letter-spacing:.16em;color:var(--soft);background:rgba(255,255,255,.25);padding:.22rem .7rem;border-radius:12px;flex-shrink:0;}
+
+/* HOME */
+.home-hero{background:var(--header);padding:2.5rem 1.5rem 2rem;position:relative;overflow:hidden;}
+.home-hero::after{content:'';position:absolute;right:-40px;bottom:-60px;width:200px;height:200px;border-radius:50%;background:rgba(255,255,255,.06);pointer-events:none;}
+.brand-name{font-family:'Playfair Display',serif;font-size:1.7rem;color:var(--ink);font-weight:700;margin-bottom:.2rem;}
+.brand-sub{font-size:.72rem;color:var(--soft);letter-spacing:.07em;}
+.home-tag{font-size:.78rem;color:var(--soft);margin-top:.8rem;letter-spacing:.04em;}
+.years-section{flex:1;padding:1.5rem;}
+.sect-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem;}
+.sect-lbl{font-size:.64rem;letter-spacing:.28em;text-transform:uppercase;color:var(--accent);}
+.pill-btn{display:flex;align-items:center;gap:.3rem;background:var(--card);border:1px solid var(--border);color:var(--soft);padding:.42rem .95rem;border-radius:20px;font-family:'Noto Serif TC',serif;font-size:.76rem;cursor:pointer;transition:all .22s;}
+.pill-btn:hover{background:var(--gold-pale);color:var(--ink);}
+
+/* YEAR CARDS */
+.years-list{display:flex;flex-direction:column;gap:.85rem;}
+.year-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.2rem 1.4rem;cursor:pointer;display:flex;align-items:center;gap:1.2rem;transition:all .25s;position:relative;animation:fadeUp .4s ease forwards;opacity:0;}
+.year-card:hover{transform:translateX(4px);box-shadow:0 8px 28px var(--shadow);}
+.year-card.is-current{border-left:3px solid var(--gold);}
+.yc-num{font-family:'Playfair Display',serif;font-size:2.4rem;font-weight:700;color:var(--ink);line-height:1;flex-shrink:0;}
+.yc-info{flex:1;}
+.yc-label{font-size:.68rem;letter-spacing:.18em;color:var(--muted);text-transform:uppercase;margin-bottom:.22rem;}
+.yc-tag{display:inline-block;padding:.1rem .6rem;background:var(--gold-pale);color:var(--accent);font-size:.6rem;border-radius:10px;}
+.yc-arrow{color:var(--muted);font-size:1.1rem;flex-shrink:0;transition:color .2s;}
+.year-card:hover .yc-arrow{color:var(--gold);}
+.yc-del{position:absolute;top:.6rem;right:.7rem;font-size:.66rem;color:transparent;cursor:pointer;transition:color .18s;padding:.2rem;}
+.year-card:hover .yc-del{color:var(--border);}
+.yc-del:hover{color:var(--red)!important;}
+
+/* MODAL */
+.overlay{display:none;position:fixed;inset:0;background:rgba(58,49,44,.35);z-index:200;align-items:flex-end;justify-content:center;}
+.overlay.open{display:flex;}
+.modal-box{background:var(--card);border-radius:24px 24px 0 0;padding:1.8rem 1.8rem 2.5rem;width:100%;max-width:480px;box-shadow:0 -8px 40px rgba(58,49,44,.18);animation:slideUp .28s ease;}
+.modal-drag{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 1.4rem;}
+.modal-ttl{font-family:'Playfair Display',serif;font-size:1.25rem;color:var(--ink);margin-bottom:1.2rem;}
+.modal-field{margin-bottom:.9rem;}
+.modal-field label{display:block;font-size:.68rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:.4rem;}
+.modal-inp{width:100%;padding:.78rem 1rem;border:1.5px solid var(--border);border-radius:12px;background:var(--bg);font-family:'Noto Serif TC',serif;font-size:.95rem;color:var(--ink);outline:none;transition:border-color .2s;}
+.modal-inp:focus{border-color:var(--gold);}
+input[type="date"].modal-inp{color:var(--ink);}
+.modal-btns{display:flex;gap:.7rem;margin-top:1.4rem;}
+.modal-ok{flex:1;padding:.72rem;background:var(--gold);color:white;border:none;border-radius:12px;font-family:'Noto Serif TC',serif;font-size:.9rem;cursor:pointer;transition:opacity .2s;}
+.modal-ok:hover{opacity:.82;}
+.modal-cancel{flex:1;padding:.72rem;background:transparent;color:var(--soft);border:1.5px solid var(--border);border-radius:12px;font-family:'Noto Serif TC',serif;font-size:.9rem;cursor:pointer;}
+.modal-cancel:hover{background:var(--border);}
+
+/* DASHBOARD */
+.dash-hdr{background:var(--header);padding:1.6rem 1.5rem;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);}
+.dash-year{font-family:'Playfair Display',serif;font-size:2.2rem;color:var(--ink);font-weight:700;line-height:1;}
+.dash-sub{font-size:.7rem;color:var(--soft);letter-spacing:.1em;margin-top:.2rem;}
+.back-pill{cursor:pointer;color:var(--soft);font-size:.76rem;letter-spacing:.08em;border:1px solid var(--border);padding:.42rem .95rem;background:rgba(255,255,255,.22);border-radius:20px;transition:all .22s;font-family:'Noto Serif TC',serif;}
+.back-pill:hover{background:rgba(255,255,255,.5);color:var(--ink);}
+.dash-body{padding:1.2rem 1.5rem 2rem;display:flex;flex-direction:column;gap:.9rem;}
+.dash-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.4rem;cursor:pointer;transition:all .25s;display:flex;align-items:center;gap:1rem;animation:fadeUp .45s ease forwards;animation-delay:calc(var(--i)*.07s);opacity:0;}
+.dash-card:hover{transform:translateX(5px);box-shadow:0 10px 30px var(--shadow);}
+.dc-icon{width:42px;height:42px;background:var(--gold-pale);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;}
+.dc-info{flex:1;}
+.dc-title{font-size:.96rem;font-weight:600;color:var(--ink);margin-bottom:.18rem;}
+.dc-desc{font-size:.73rem;color:var(--soft);line-height:1.7;}
+.dc-arrow{color:var(--muted);font-size:1.1rem;flex-shrink:0;transition:color .2s;}
+.dash-card:hover .dc-arrow{color:var(--gold);}
+
+/* SETTINGS */
+.settings-body{flex:1;padding:1.5rem;}
+.settings-section{margin-bottom:1.8rem;}
+.settings-title{font-size:.62rem;letter-spacing:.28em;text-transform:uppercase;color:var(--accent);margin-bottom:.8rem;}
+.settings-row{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+.settings-item{display:flex;align-items:center;gap:1rem;padding:1rem 1.2rem;cursor:pointer;transition:background .2s;border-bottom:1px solid var(--border);}
+.settings-item:last-child{border-bottom:none;}
+.settings-item:hover{background:var(--gold-pale);}
+.si-icon{width:36px;height:36px;background:var(--gold-pale);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;}
+.si-info{flex:1;}
+.si-title{font-size:.9rem;font-weight:600;color:var(--ink);margin-bottom:.1rem;}
+.si-desc{font-size:.72rem;color:var(--muted);}
+.si-arrow{color:var(--muted);font-size:1rem;}
+
+/* INNER */
+.inner-body{flex:1;padding:1.3rem 1.5rem 2.5rem;}
+.slbl{font-size:.62rem;letter-spacing:.25em;text-transform:uppercase;color:var(--accent);margin-bottom:.75rem;margin-top:1.3rem;}
+.slbl:first-child{margin-top:0;}
+
+/* PLATFORM LIST */
+.pf-list{display:flex;flex-direction:column;gap:.7rem;}
+.pf-item{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:.9rem 1.1rem;display:flex;align-items:center;gap:.9rem;cursor:pointer;transition:all .22s;}
+.pf-item:hover{transform:translateX(4px);box-shadow:0 6px 18px var(--shadow);}
+.pf-icon{width:42px;height:42px;border-radius:12px;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.pf-icon svg{width:42px;height:42px;}
+.pf-info{flex:1;min-width:0;}
+.pf-name{font-size:.92rem;font-weight:600;color:var(--ink);margin-bottom:.12rem;}
+.pf-sub{font-size:.72rem;color:var(--muted);}
+.pf-right{display:flex;flex-direction:column;align-items:flex-end;gap:.1rem;flex-shrink:0;margin-right:.3rem;}
+.pf-num{font-family:'Playfair Display',serif;font-size:1.25rem;color:var(--accent);font-weight:700;line-height:1;}
+.pf-unit{font-size:.6rem;color:var(--muted);letter-spacing:.05em;}
+.pf-arrow{color:var(--border);font-size:1rem;transition:color .2s;}
+.pf-item:hover .pf-arrow{color:var(--gold);}
+
+/* STATS */
+.stat-wide{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.1rem 1.4rem;margin-bottom:.8rem;display:flex;align-items:center;justify-content:space-between;}
+.sw-label{font-size:.67rem;letter-spacing:.17em;text-transform:uppercase;color:var(--muted);}
+.sw-val{font-family:'Playfair Display',serif;font-size:1.6rem;color:var(--ink);font-weight:700;}
+.sw-val.pos{color:var(--green);}
+.sw-val.neg{color:var(--red);}
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.65rem;margin-bottom:1.1rem;}
+.stat-grid.two{grid-template-columns:repeat(2,1fr);}
+.stat-box{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:.85rem .7rem;text-align:center;}
+.sb-val{font-family:'Playfair Display',serif;font-size:1.35rem;color:var(--ink);display:block;line-height:1;margin-bottom:.22rem;}
+.sb-val.pos{color:var(--green);}
+.sb-val.neg{color:var(--red);}
+.sb-lbl{font-size:.58rem;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;}
+
+/* TABLE */
+table{width:100%;border-collapse:collapse;background:var(--card);border-radius:12px;overflow:hidden;border:1px solid var(--border);}
+thead tr{background:var(--header);}
+thead th{padding:.75rem .85rem;text-align:left;font-size:.63rem;letter-spacing:.11em;text-transform:uppercase;color:var(--soft);font-weight:600;}
+tbody tr{border-bottom:1px solid var(--border);transition:background .15s;}
+tbody tr:hover{background:var(--bg);}
+tbody td{padding:.68rem .85rem;font-size:.84rem;color:var(--soft);}
+.ed{outline:none;border-bottom:1px dashed transparent;transition:border-color .18s;min-width:48px;display:inline-block;}
+.ed:focus{border-bottom-color:var(--accent);color:var(--ink);}
+.gpos{color:var(--green);font-size:.72rem;}
+.gneg{color:var(--red);font-size:.72rem;}
+
+/* TABS */
+.tab-row{display:flex;gap:.55rem;margin-bottom:1.1rem;flex-wrap:wrap;}
+.tab-pill{padding:.42rem 1.1rem;border:1px solid var(--border);cursor:pointer;font-size:.76rem;transition:all .22s;background:var(--card);border-radius:20px;color:var(--soft);font-family:'Noto Serif TC',serif;}
+.tab-pill.active{background:var(--gold);color:white;border-color:var(--gold);}
+
+/* COLLAB */
+.collab-list{display:flex;flex-direction:column;gap:.65rem;}
+.collab-item{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1rem 1.1rem;display:flex;align-items:flex-start;gap:.85rem;}
+.collab-left{flex:1;min-width:0;}
+.collab-vendor{font-size:.92rem;font-weight:600;color:var(--ink);margin-bottom:.22rem;}
+.collab-meta{font-size:.72rem;color:var(--muted);}
+.collab-right{display:flex;flex-direction:column;align-items:flex-end;gap:.3rem;flex-shrink:0;}
+.collab-amt{font-family:'Playfair Display',serif;font-size:1.05rem;color:var(--accent);font-weight:700;}
+.collab-del{font-size:.68rem;color:var(--border);cursor:pointer;padding:.2rem;transition:color .18s;line-height:1;}
+.collab-del:hover{color:var(--red);}
+
+/* MONTHLY SUMMARY TABLE for collab */
+.month-collab-row{display:flex;justify-content:space-between;align-items:center;padding:.6rem .85rem;border-bottom:1px solid var(--border);}
+.month-collab-row:last-child{border-bottom:none;}
+.mcr-month{font-size:.84rem;color:var(--soft);}
+.mcr-amt{font-family:'Playfair Display',serif;font-size:.96rem;color:var(--accent);}
+.mcr-count{font-size:.68rem;color:var(--muted);}
+
+/* PERFORMANCE */
+.sum-cards{display:flex;flex-direction:column;gap:.7rem;margin-bottom:1.2rem;}
+.sum-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1rem 1.2rem;display:flex;align-items:center;justify-content:space-between;}
+.sum-label{font-size:.72rem;color:var(--soft);margin-bottom:.15rem;}
+.sum-val{font-family:'Playfair Display',serif;font-size:1.4rem;color:var(--ink);font-weight:700;}
+
+/* RANK TABLE — upgrade page */
+.rank-table-wrap{overflow-x:auto;}
+.rank-table{min-width:520px;}
+.rank-badge{display:inline-block;padding:.18rem .55rem;font-size:.64rem;border-radius:6px;font-weight:600;}
+.rb-intern{background:#F0EDE8;color:#7A6E67;}
+.rb-3{background:#E8F0F5;color:#4A6E8C;}
+.rb-3c{background:#EAF0EA;color:#4A7A5A;}
+.rb-2{background:#F5EAE8;color:#8C5A4A;}
+.rb-1{background:#F5F0E8;color:#8C784A;}
+.rb-royal{background:#EDE3DC;color:#8C6B4A;}
+
+/* MEMBER CARDS */
+.member-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:.85rem;}
+.member-card{background:var(--card);border:1px solid var(--border);border-top:2px solid var(--gold);padding:1rem;text-align:center;border-radius:12px;transition:all .22s;}
+.member-card:hover{box-shadow:0 7px 18px var(--shadow);transform:translateY(-3px);}
+.m-avatar{width:38px;height:38px;background:var(--gold-pale);border-radius:50%;margin:0 auto .55rem;display:flex;align-items:center;justify-content:center;font-size:.95rem;}
+.m-name{font-size:.82rem;font-weight:600;color:var(--ink);margin-bottom:.18rem;}
+.m-role{font-size:.65rem;color:var(--muted);}
+.dashed-btn{background:transparent;border:1px dashed var(--gold);color:var(--gold);padding:.48rem 1.1rem;cursor:pointer;font-family:'Noto Serif TC',serif;font-size:.76rem;letter-spacing:.08em;transition:all .22s;margin-top:1rem;border-radius:8px;display:inline-block;}
+.dashed-btn:hover{background:var(--gold-pale);}
+
+/* COPY CODE BUTTON */
+.copy-code-btn{display:flex;align-items:center;gap:.5rem;background:var(--ink);color:var(--card);border:none;padding:.7rem 1.3rem;border-radius:12px;font-family:'Noto Serif TC',serif;font-size:.82rem;cursor:pointer;transition:all .22s;width:100%;}
+.copy-code-btn:hover{opacity:.85;}
+.copy-code-btn.copied{background:var(--green);}
+.copy-toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%);background:var(--ink);color:white;padding:.6rem 1.4rem;border-radius:20px;font-size:.8rem;opacity:0;transition:opacity .3s;pointer-events:none;z-index:300;}
+.copy-toast.show{opacity:1;}
+
+/* RANK TABLE — simple */
+.rank-simple-table{width:100%;border-collapse:collapse;background:var(--card);border-radius:14px;overflow:hidden;border:1px solid var(--border);}
+.rank-simple-table thead tr{background:var(--header);}
+.rank-simple-table thead th{padding:.7rem .6rem;text-align:center;font-size:.62rem;letter-spacing:.08em;color:var(--soft);font-weight:600;}
+.rank-simple-table thead th:first-child{text-align:left;padding-left:.9rem;}
+.rank-simple-table tbody tr{border-bottom:1px solid var(--border);transition:background .15s;}
+.rank-simple-table tbody tr:hover{background:var(--bg);}
+.rank-simple-table tbody td{padding:.65rem .6rem;font-size:.84rem;color:var(--soft);text-align:center;}
+.rank-simple-table tbody td:first-child{text-align:left;padding-left:.9rem;color:var(--ink);font-weight:500;}
+.rank-simple-table .ed{min-width:28px;text-align:center;}
+
+/* RANK LIST CARDS */
+.rank-list{display:flex;flex-direction:column;gap:.85rem;}
+.rank-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.2rem 1.4rem;cursor:pointer;display:flex;align-items:center;gap:1.2rem;transition:all .25s;animation:fadeUp .4s ease forwards;opacity:0;}
+.rank-card:hover{transform:translateX(4px);box-shadow:0 8px 28px var(--shadow);}
+.rank-dot{width:14px;height:14px;border-radius:50%;flex-shrink:0;}
+.rank-card-info{flex:1;}
+.rank-card-name{font-size:1rem;font-weight:600;color:var(--ink);margin-bottom:.18rem;}
+.rank-card-sub{font-size:.72rem;color:var(--muted);}
+.rank-card-right{display:flex;flex-direction:column;align-items:flex-end;gap:.1rem;flex-shrink:0;margin-right:.3rem;}
+.rank-card-num{font-family:'Playfair Display',serif;font-size:1.5rem;color:var(--accent);font-weight:700;line-height:1;}
+.rank-card-unit{font-size:.62rem;color:var(--muted);}
+.rank-card-arrow{color:var(--border);font-size:1rem;flex-shrink:0;transition:color .2s;}
+.rank-card:hover .rank-card-arrow{color:var(--gold);}
+
+/* RANK DETAIL */
+.rd-stat{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.1rem 1.4rem;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;}
+.rd-stat-label{font-size:.67rem;letter-spacing:.17em;text-transform:uppercase;color:var(--muted);}
+.rd-stat-val{font-family:'Playfair Display',serif;font-size:1.8rem;font-weight:700;}
+
+/* BAR CHART */
+.chart-wrap{margin-bottom:1.5rem;}
+.chart-bar-row{display:flex;align-items:center;gap:.7rem;margin-bottom:.6rem;}
+.chart-bar-label{font-size:.72rem;color:var(--soft);width:52px;flex-shrink:0;text-align:right;}
+.chart-bar-track{flex:1;height:28px;background:var(--border);border-radius:6px;overflow:hidden;position:relative;}
+.chart-bar-fill{height:100%;border-radius:6px;transition:width .5s ease;display:flex;align-items:center;justify-content:flex-end;padding-right:.5rem;min-width:2px;}
+.chart-bar-val{font-size:.72rem;font-weight:700;color:white;white-space:nowrap;}
+.chart-bar-val.dark{color:var(--ink);}
+.bar-intern{background:#BEB5AC;}
+.bar-r3{background:#8AAFC4;}
+.bar-r3c{background:#7AB09A;}
+.bar-r2{background:#C4906A;}
+.bar-r1{background:#C4A96A;}
+.bar-royal{background:#9B8579;}
+.chart-month-sel{display:flex;align-items:center;gap:.6rem;margin-bottom:1.2rem;flex-wrap:wrap;}
+.chart-month-btn{padding:.3rem .75rem;border:1px solid var(--border);border-radius:16px;font-size:.72rem;cursor:pointer;background:var(--card);color:var(--soft);font-family:'Noto Serif TC',serif;transition:all .18s;}
+.chart-month-btn.active{background:var(--gold);color:white;border-color:var(--gold);}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
+</style>
+</head>
+<body id="artifacts-component-root-html" style="background-color: transparent;">
+
+<!-- MODAL: Add Year -->
+<div class="overlay" id="modal" onclick="if(event.target===this)closeModal()">
+<div class="modal-box">
+<div class="modal-drag"></div>
+<div class="modal-ttl">新增年份</div>
+<div class="modal-field">
+<label>年份</label>
+<input class="modal-inp" id="modal-inp" type="number" placeholder="例：2027" min="2000" max="2099" style="text-align:center;font-size:1.3rem;">
+</div>
+<div class="modal-btns">
+<button class="modal-cancel" onclick="closeModal()">取消</button>
+<button class="modal-ok" onclick="confirmAdd()">新增 →</button>
+</div>
+</div>
+</div>
+
+<!-- MODAL: Add Collab -->
+<div class="overlay" id="collab-modal" onclick="if(event.target===this)closeCollabModal()">
+<div class="modal-box">
+<div class="modal-drag"></div>
+<div class="modal-ttl">🐻 新增合作紀錄</div>
+<div class="modal-field">
+<label>合作日期</label>
+<input class="modal-inp" id="c-date" type="date">
+</div>
+<div class="modal-field">
+<label>廠商名稱</label>
+<input class="modal-inp" id="c-vendor" type="text" placeholder="廠商 / 品牌名稱">
+</div>
+<div class="modal-field">
+<label>匯款金額（NT$）</label>
+<input class="modal-inp" id="c-amt" type="number" placeholder="0">
+</div>
+<div class="modal-field">
+<label>備註（選填）</label>
+<input class="modal-inp" id="c-note" type="text" placeholder="補充說明">
+</div>
+<div class="modal-btns">
+<button class="modal-cancel" onclick="closeCollabModal()">取消</button>
+<button class="modal-ok" onclick="confirmCollab()">新增 →</button>
+</div>
+</div>
+</div>
+
+<input type="file" id="file-inp" accept=".json" style="display:none" onchange="doImport(event)">
+
+<!-- ══ HOME ══ -->
+<div id="home" class="page">
+<div class="home-hero">
+<div class="brand-name">more.</div>
+<div class="brand-sub">Annual Review</div>
+<div class="home-tag">紀錄每一年的成長，看見每一步的軌跡</div>
+</div>
+<div class="years-section">
+<div class="sect-hdr">
+<div class="sect-lbl">選擇年份</div>
+<div style="display:flex;gap:.55rem;">
+<button class="pill-btn" onclick="goTo('settings')">⚙️ 設定</button>
+<button class="pill-btn" onclick="openModal()">＋ 新增年份</button>
+</div>
+</div>
+<div class="years-list" id="years-list"><div class="year-card is-current" style="animation-delay: 0s;"><span class="yc-del" onclick="delYear(event,2026)">✕</span><div class="yc-num">2026</div><div class="yc-info"><div class="yc-label">年度復盤</div><span class="yc-tag">今年</span></div><div class="yc-arrow">›</div></div></div>
+</div>
+</div>
+
+<!-- ══ SETTINGS ══ -->
+<div id="settings" class="page active">
+<div class="top-bar">
+<div class="top-back" onclick="goTo('home')">←</div>
+<div class="top-title">設定</div>
+</div>
+<div class="settings-body">
+<div class="settings-section">
+<div class="settings-title">資料管理</div>
+<div class="settings-row">
+<div class="settings-item" onclick="doExport()">
+<div class="si-icon">⬇️</div>
+<div class="si-info"><div class="si-title">匯出資料</div><div class="si-desc">將所有年份資料儲存為 JSON 檔案</div></div>
+<div class="si-arrow">›</div>
+</div>
+<div class="settings-item" onclick="document.getElementById('file-inp').click()">
+<div class="si-icon">⬆️</div>
+<div class="si-info"><div class="si-title">匯入資料</div><div class="si-desc">從 JSON 檔案還原所有復盤資料</div></div>
+<div class="si-arrow">›</div>
+</div>
+<div class="settings-item" onclick="copySourceCode()">
+<div class="si-icon">📋</div>
+<div class="si-info"><div class="si-title">複製程式碼</div><div class="si-desc">複製完整 HTML 原始碼到剪貼簿</div></div>
+<div class="si-arrow">›</div>
+</div>
+</div>
+</div>
+<div class="settings-section">
+<div class="settings-title">關於</div>
+<div class="settings-row">
+<div class="settings-item" style="cursor:default;">
+<div class="si-icon">📋</div>
+<div class="si-info"><div class="si-title">年度復盤系統</div><div class="si-desc">版本 2.1 · Annual Review Dashboard</div></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- ══ DASHBOARD ══ -->
+<div id="dashboard" class="page">
+<div class="dash-hdr">
+<div>
+<div class="dash-year" id="dash-year">2026</div>
+<div class="dash-sub">年度復盤報告</div>
+</div>
+<div style="display:flex;gap:.55rem;align-items:center;">
+<button class="back-pill" onclick="goTo('settings')" style="padding:.42rem .75rem;">⚙️</button>
+<button class="back-pill" onclick="goTo('home')">← 所有年份</button>
+</div>
+</div>
+<div class="dash-body">
+<div class="dash-card" style="--i:1" onclick="goInner('fans-page')">
+<div class="dc-icon">📊</div>
+<div class="dc-info"><div class="dc-title">粉絲復盤表</div><div class="dc-desc">IG · 臉書 · 抖音 · 小紅書 · Threads</div></div>
+<div class="dc-arrow">›</div>
+</div>
+<div class="dash-card" style="--i:2" onclick="goInner('profit-page')">
+<div class="dc-icon">💰</div>
+<div class="dc-info"><div class="dc-title">淨利記錄表</div><div class="dc-desc">客人 · 夥伴 · 合作 淨利</div></div>
+<div class="dc-arrow">›</div>
+</div>
+<div class="dash-card" style="--i:3" onclick="goInner('perf-page')">
+<div class="dc-icon">💎</div>
+<div class="dc-info"><div class="dc-title">團隊年度業績</div><div class="dc-desc">總合 · 自己業績 · 直屬皇家業績</div></div>
+<div class="dc-arrow">›</div>
+</div>
+<div class="dash-card" style="--i:4" onclick="goInner('team-page')">
+<div class="dc-icon">👥</div>
+<div class="dc-info"><div class="dc-title">直屬團隊人數</div><div class="dc-desc">成員名單 · 月度人數統計</div></div>
+<div class="dc-arrow">›</div>
+</div>
+<div class="dash-card" style="--i:5" onclick="goInner('upgrade-page')">
+<div class="dc-icon">📈</div>
+<div class="dc-info"><div class="dc-title">各級別人數統計</div><div class="dc-desc">總覽圖表 · 實習 · 三級 · 二級 · 一級 · 皇家</div></div>
+<div class="dc-arrow">›</div>
+</div>
+</div>
+</div>
+
+<!-- ══ FANS LIST ══ -->
+<div id="fans-page" class="page">
+<div class="top-bar">
+<div class="top-back" onclick="goTo('dashboard')">←</div>
+<div class="top-title">粉絲復盤表</div>
+<div class="top-badge" id="fans-badge"></div>
+</div>
+<div class="inner-body">
+<div class="slbl">選擇平台</div>
+<div class="pf-list" id="fans-pf-list"></div>
+</div>
+</div>
+
+<!-- ══ FANS DETAIL ══ -->
+<div id="fans-detail" class="page">
+<div class="top-bar">
+<div class="top-back" onclick="goTo('fans-page')">←</div>
+<div class="top-title" id="fans-detail-title">IG</div>
+<div class="top-badge" id="fans-detail-badge"></div>
+</div>
+<div class="inner-body">
+<div class="stat-grid" id="fans-stats"></div>
+<div class="slbl" id="fans-detail-lbl"></div>
+<table>
+<thead><tr><th>月份</th><th>粉絲數</th><th>增長數</th><th>成長率</th></tr></thead>
+<tbody id="fans-detail-body"></tbody>
+</table>
+</div>
+</div>
+
+<!-- ══ PROFIT ══ -->
+<div id="profit-page" class="page">
+<div class="top-bar">
+<div class="top-back" onclick="goTo('dashboard')">←</div>
+<div class="top-title">🐻 淨利記錄表</div>
+<div class="top-badge" id="profit-badge"></div>
+</div>
+<div class="inner-body">
+<div class="tab-row">
+<div class="tab-pill active" onclick="switchProfit(event,'client')">🐻 客人</div>
+<div class="tab-pill" onclick="switchProfit(event,'partner')">🐻 夥伴</div>
+<div class="tab-pill" onclick="switchProfit(event,'collab')">🐻 合作</div>
+</div>
+<div id="profit-annual-box"></div>
+<!-- client/partner -->
+<div id="profit-table-wrap">
+<div class="slbl" id="profit-lbl"></div>
+<table>
+<thead><tr><th>月份</th><th>淨利</th><th>備註</th></tr></thead>
+<tbody id="profit-tbody"></tbody>
+</table>
+</div>
+<!-- collab -->
+<div id="profit-collab-wrap" style="display:none">
+<!-- month summary -->
+<div class="tab-row" style="margin-bottom:.9rem;">
+<div class="tab-pill active" onclick="switchCollabView(event,'list')">📋 全部紀錄</div>
+<div class="tab-pill" onclick="switchCollabView(event,'monthly')">📅 月份統計</div>
+</div>
+<div id="collab-list-wrap">
+<div class="collab-list" id="collab-list"></div>
+<button class="dashed-btn" onclick="openCollabModal()">＋ 新增合作紀錄</button>
+</div>
+<div id="collab-monthly-wrap" style="display:none">
+<div class="slbl">每月合作收入</div>
+<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;" id="collab-monthly-list"></div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- ══ PERFORMANCE ══ -->
+<div id="perf-page" class="page">
+<div class="top-bar">
+<div class="top-back" onclick="goTo('dashboard')">←</div>
+<div class="top-title">🐻 團隊年度業績</div>
+<div class="top-badge" id="perf-badge"></div>
+</div>
+<div class="inner-body">
+<div class="tab-row">
+<div class="tab-pill active" onclick="switchPerf(event,'summary')">🐻 總合</div>
+<div class="tab-pill" onclick="switchPerf(event,'my')">🐻 自己</div>
+<div class="tab-pill" onclick="switchPerf(event,'royal')">🐻 皇家</div>
+</div>
+<div id="perf-content"></div>
+</div>
+</div>
+
+<!-- ══ TEAM ══ -->
+<div id="team-page" class="page">
+<div class="top-bar">
+<div class="top-back" onclick="goTo('dashboard')">←</div>
+<div class="top-title">直屬團隊人數</div>
+<div class="top-badge" id="team-badge"></div>
+</div>
+<div class="inner-body">
+<div class="stat-grid two">
+<div class="stat-box"><span class="sb-val" id="team-total">—</span><span class="sb-lbl">目前總人數</span></div>
+<div class="stat-box"><span class="sb-val" id="team-new">—</span><span class="sb-lbl">本月新增</span></div>
+</div>
+<div class="slbl">月度人數統計</div>
+<table>
+<thead><tr><th>月份</th><th>總人數</th><th>新加入</th><th>退出</th><th>備註</th></tr></thead>
+<tbody id="team-monthly"></tbody>
+</table>
+</div>
+</div>
+
+<!-- ══ UPGRADE (各級別) ══ -->
+<!-- ══ UPGRADE: 各級別列表 ══ -->
+<div id="upgrade-page" class="page">
+<div class="top-bar">
+<div class="top-back" onclick="goTo('dashboard')">←</div>
+<div class="top-title">各級別人數統計</div>
+<div class="top-badge" id="upgrade-badge"></div>
+</div>
+<div class="inner-body">
+<div class="slbl">選擇級別</div>
+<div id="rank-list"></div>
+</div>
+</div>
+
+<!-- ══ UPGRADE: 各級別詳細 ══ -->
+<div id="rank-detail-page" class="page">
+<div class="top-bar">
+<div class="top-back" onclick="goTo('upgrade-page')">←</div>
+<div class="top-title" id="rank-detail-title"></div>
+<div class="top-badge" id="rank-detail-badge"></div>
+</div>
+<div class="inner-body" id="rank-detail-body"></div>
+</div>
+
+<script>
+// ── LOGOS (fixed IG & Threads) ──
+const LOGOS={
+ig:`<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="igG" cx="30%" cy="107%" r="150%"><stop offset="0%" stop-color="#fdf497"/><stop offset="5%" stop-color="#fdf497"/><stop offset="45%" stop-color="#fd5949"/><stop offset="60%" stop-color="#d6249f"/><stop offset="90%" stop-color="#285AEB"/></radialGradient></defs><rect width="24" height="24" rx="6" fill="url(#igG)"/><rect x="3.5" y="3.5" width="17" height="17" rx="5" stroke="white" stroke-width="1.8" fill="none"/><circle cx="12" cy="12" r="3.3" stroke="white" stroke-width="1.8" fill="none"/><circle cx="16.8" cy="7.2" r="1.1" fill="white"/></svg>`,
+fb:`<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="6" fill="#1877F2"/><path d="M16 8h-2a1 1 0 00-1 1v2h3l-.5 3H13v7h-3v-7H8v-3h2V9a4 4 0 014-4h2v3z" fill="white"/></svg>`,
+tt:`<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="6" fill="black"/><path d="M17 6.5c-.8-.5-1.4-1.3-1.6-2.2h-2.2v9.5c0 1-.8 1.8-1.8 1.8s-1.8-.8-1.8-1.8.8-1.8 1.8-1.8c.2 0 .3 0 .5.1V9.8c-.2 0-.3 0-.5 0-2.2 0-4 1.8-4 4s1.8 4 4 4 4-1.8 4-4V8.3c.8.5 1.7.8 2.6.8V6.9c-.4 0-.7-.1-1-.4z" fill="white"/></svg>`,
+xhs:`<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="6" fill="#FF2442"/><text x="12" y="15.5" text-anchor="middle" fill="white" font-size="7.5" font-weight="bold" font-family="sans-serif">小红书</text></svg>`,
+th:`<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="6" fill="#000"/><path fill="white" d="M15.3 8.3c-1.7-1.7-4.5-1.7-6.3 0-1.4 1.4-1.7 3.4-.9 5.1.1.2.2.4.3.5.8 1.1 2 1.8 3.4 1.8.3 0 .6 0 .9-.1.2 0 .3-.2.3-.4s-.2-.4-.4-.3c-.3.1-.5.1-.8.1-1.2 0-2.2-.6-2.8-1.5-.1-.1-.2-.3-.3-.5-.6-1.3-.4-2.9.6-3.9 1.4-1.4 3.6-1.4 5 0 .6.6 1 1.5 1 2.4 0 .9-.4 1.4-1 1.4-.3 0-.5-.2-.5-.5V11c0-.1 0-.2-.1-.2h-1.1c-.1 0-.2.1-.2.2 0 .1.1.2.2.2h.9v1.9c0 .6.4 1 1 1 1 0 1.5-.9 1.5-1.9 0-1.1-.5-2.2-1.3-2.9l-.4-.4zm-3.1 5.9c-1 0-1.8-.8-1.8-1.8s.8-1.8 1.8-1.8 1.8.8 1.8 1.8-.8 1.8-1.8 1.8zm0-2.9c-.6 0-1.1.5-1.1 1.1s.5 1.1 1.1 1.1 1.1-.5 1.1-1.1-.5-1.1-1.1-1.1z"/></svg>`
+};
+
+const PLATFORMS=[
+{key:'ig',label:'Instagram'},
+{key:'fb',label:'臉書'},
+{key:'tt',label:'抖音 TikTok'},
+{key:'xhs',label:'小紅書'},
+{key:'th',label:'Threads'}
+];
+const MONTHS=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+const RANKS=['intern','r3','r3c','r2','r1','royal'];
+const RANK_LABELS={intern:'實習',r3:'三級',r3c:'三級輔導',r2:'二級',r1:'一級',royal:'皇家'};
+const TODAY_YEAR=new Date().getFullYear();
+
+let years=[TODAY_YEAR],activeYear=TODAY_YEAR,fansPlatform='ig',profitType='client',perfType='summary';
+const YD={};
+
+function initYear(y){
+if(YD[y])return;
+YD[y]={
+fans:Object.fromEntries(PLATFORMS.map(p=>[p.key,Array(12).fill('')])),
+profit:{
+client:MONTHS.map(()=>({profit:'',note:''})),
+partner:MONTHS.map(()=>({profit:'',note:''})),
+collab:[]
+},
+perf:{
+my:MONTHS.map(()=>({amt:'',note:''})),
+royal:MONTHS.map(()=>({amt:'',note:''}))
+},
+team:[],
+teamMonthly:MONTHS.map(()=>({total:'',added:'',left:'',note:''})),
+rankMonthly:MONTHS.map(()=>({intern:'',r3:'',r3c:'',r2:'',r1:'',royal:''}))
+};
+}
+
+// ── NAV ──
+function goTo(id){
+document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+document.getElementById(id).classList.add('active');
+window.scrollTo(0,0);
+}
+function setBadge(ids){ids.forEach(k=>{const e=document.getElementById(k);if(e)e.textContent=activeYear+' 年';});}
+function openYear(y){
+initYear(y);activeYear=y;
+document.getElementById('dash-year').textContent=y;
+document.querySelectorAll('.dash-card').forEach(c=>{c.style.animation='none';void c.offsetWidth;c.style.animation='';});
+goTo('dashboard');
+}
+function goInner(pid){
+setBadge(['fans-badge','profit-badge','perf-badge','team-badge','upgrade-badge','fans-detail-badge','rank-detail-badge']);
+goTo(pid);
+if(pid==='fans-page') renderFansList();
+if(pid==='profit-page') renderProfit();
+if(pid==='perf-page') renderPerf();
+if(pid==='team-page') renderTeam();
+if(pid==='upgrade-page') renderUpgrade();
+}
+
+// ── YEARS ──
+function renderYears(){
+const el=document.getElementById('years-list');el.innerHTML='';
+[...years].sort((a,b)=>b-a).forEach((y,i)=>{
+const d=document.createElement('div');
+d.className='year-card'+(y===TODAY_YEAR?' is-current':'');
+d.style.animationDelay=(i*.07)+'s';
+d.innerHTML=`<span class="yc-del" onclick="delYear(event,${y})">✕</span><div class="yc-num">${y}</div><div class="yc-info"><div class="yc-label">年度復盤</div>${y===TODAY_YEAR?'<span class="yc-tag">今年</span>':''}</div><div class="yc-arrow">›</div>`;
+d.addEventListener('click',()=>openYear(y));
+el.appendChild(d);
+});
+}
+function delYear(e,y){
+e.stopPropagation();
+if(years.length<=1){alert('至少保留一個年份！');return;}
+if(!confirm(`確定刪除 ${y} 年所有資料？`))return;
+years=years.filter(x=>x!==y);delete YD[y];renderYears();
+}
+
+// ── MODAL: year ──
+function openModal(){document.getElementById('modal-inp').value='';document.getElementById('modal').classList.add('open');setTimeout(()=>document.getElementById('modal-inp').focus(),100);}
+function closeModal(){document.getElementById('modal').classList.remove('open');}
+function confirmAdd(){
+const v=parseInt(document.getElementById('modal-inp').value);
+if(!v||v<2000||v>2099){alert('請輸入正確年份');return;}
+if(years.includes(v)){alert(`${v} 年已存在`);closeModal();return;}
+years.push(v);initYear(v);closeModal();renderYears();
+}
+document.getElementById('modal-inp').addEventListener('keydown',e=>{if(e.key==='Enter')confirmAdd();});
+
+// ── MODAL: collab ──
+function openCollabModal(){
+const today=new Date().toISOString().split('T')[0];
+document.getElementById('c-date').value=today;
+document.getElementById('c-vendor').value='';
+document.getElementById('c-amt').value='';
+document.getElementById('c-note').value='';
+document.getElementById('collab-modal').classList.add('open');
+setTimeout(()=>document.getElementById('c-vendor').focus(),100);
+}
+function closeCollabModal(){document.getElementById('collab-modal').classList.remove('open');}
+function confirmCollab(){
+const date=document.getElementById('c-date').value;
+const vendor=document.getElementById('c-vendor').value.trim();
+const amt=parseFloat(document.getElementById('c-amt').value)||0;
+const note=document.getElementById('c-note').value.trim();
+if(!vendor){alert('請輸入廠商名稱');return;}
+YD[activeYear].profit.collab.push({date,vendor,amt,note});
+YD[activeYear].profit.collab.sort((a,b)=>a.date.localeCompare(b.date));
+closeCollabModal();
+renderCollabList();
+renderCollabMonthly();
+renderProfitAnnualBox();
+}
+
+// ── EXPORT / IMPORT ──
+function doExport(){
+const blob=new Blob([JSON.stringify({years,YD},null,2)],{type:'application/json'});
+const url=URL.createObjectURL(blob);
+const a=document.createElement('a');a.href=url;a.download=`annual-review-backup.json`;a.click();
+URL.revokeObjectURL(url);
+}
+function doImport(e){
+const file=e.target.files[0];if(!file)return;
+const reader=new FileReader();
+reader.onload=ev=>{
+try{
+const data=JSON.parse(ev.target.result);
+if(data.years&&data.YD){
+Object.assign(YD,data.YD);
+data.years.forEach(y=>{if(!years.includes(y))years.push(y);});
+renderYears();alert('✅ 匯入成功！');
+}else{alert('格式錯誤');}
+}catch{alert('匯入失敗');}
+};
+reader.readAsText(file);e.target.value='';
+}
+
+// ── ❶ FANS ──
+function renderFansList(){
+document.getElementById('fans-badge').textContent=activeYear+' 年';
+const el=document.getElementById('fans-pf-list');el.innerHTML='';
+PLATFORMS.forEach((p,i)=>{
+const vals=YD[activeYear].fans[p.key].filter(v=>v!=='');
+const latest=vals.length?parseInt(vals[vals.length-1]):null;
+const item=document.createElement('div');item.className='pf-item';
+item.style.animationDelay=(i*.06)+'s';
+item.innerHTML=`
+<div class="pf-icon">${LOGOS[p.key]}</div>
+<div class="pf-info">
+<div class="pf-name">${p.label}</div>
+<div class="pf-sub">${latest?'目前粉絲人數':'點擊開始記錄'}</div>
+</div>
+${latest?`<div class="pf-right"><div class="pf-num">${latest.toLocaleString()}</div><div class="pf-unit">人</div></div>`:''}
+<div class="pf-arrow">›</div>`;
+item.addEventListener('click',()=>openFansDetail(p.key));
+el.appendChild(item);
+});
+}
+function openFansDetail(pkey){
+fansPlatform=pkey;
+const p=PLATFORMS.find(x=>x.key===pkey);
+document.getElementById('fans-detail-title').innerHTML=`<span style="display:inline-flex;align-items:center;gap:.5rem"><span style="width:20px;height:20px;display:inline-flex;flex-shrink:0">${LOGOS[pkey]}</span>${p.label}</span>`;
+document.getElementById('fans-detail-badge').textContent=activeYear+' 年';
+document.getElementById('fans-detail-lbl').textContent=p.label+' · 月度粉絲紀錄';
+goTo('fans-detail');
+renderFansTable(pkey);
+}
+function renderFansTable(pkey){
+const pdata=YD[activeYear].fans[pkey];
+const tbody=document.getElementById('fans-detail-body');tbody.innerHTML='';
+const sr=document.getElementById('fans-stats');
+sr.innerHTML=`<div class="stat-box"><span class="sb-val" id="fs-s">—</span><span class="sb-lbl">年初粉絲</span></div><div class="stat-box"><span class="sb-val" id="fs-e">—</span><span class="sb-lbl">年末粉絲</span></div><div class="stat-box"><span class="sb-val" id="fs-g">—</span><span class="sb-lbl">年度增長</span></div>`;
+MONTHS.forEach((m,i)=>{
+const tr=document.createElement('tr');
+tr.innerHTML=`<td>${m}</td><td><span class="ed" contenteditable="true" id="fv${i}">${pdata[i]}</span></td><td><span id="fg${i}" class="gpos">—</span></td><td><span id="fr${i}" style="font-size:.72rem;color:var(--muted)">—</span></td>`;
+tbody.appendChild(tr);
+tr.querySelector(`#fv${i}`).addEventListener('blur',()=>{pdata[i]=document.getElementById(`fv${i}`).textContent.trim();recalcFans(pdata);renderFansList();});
+});
+recalcFans(pdata);
+}
+function recalcFans(d){
+for(let i=0;i<12;i++){
+const cv=parseInt(d[i])||0,pv=i>0?parseInt(d[i-1])||0:0;
+const g=document.getElementById(`fg${i}`),r=document.getElementById(`fr${i}`);
+if(!g)continue;
+if(cv&&i>0&&pv){const diff=cv-pv,rate=((diff/pv)*100).toFixed(1);g.textContent=(diff>=0?'+':'')+diff;g.className=diff>=0?'gpos':'gneg';r.textContent=rate+'%';r.style.color=diff>=0?'var(--green)':'var(--red)';}
+else{g.textContent='—';g.className='gpos';r.textContent='—';}
+}
+const first=d.find(v=>v!==''),last=[...d].reverse().find(v=>v!=='');
+const ss=document.getElementById('fs-s'),se=document.getElementById('fs-e'),sg=document.getElementById('fs-g');
+if(!ss)return;
+ss.textContent=first?parseInt(first).toLocaleString():'—';
+se.textContent=last?parseInt(last).toLocaleString():'—';
+if(first&&last){const g=parseInt(last)-parseInt(first);sg.textContent=(g>=0?'+':'')+g.toLocaleString();sg.className='sb-val'+(g>=0?' pos':' neg');}
+else{sg.textContent='—';sg.className='sb-val';}
+}
+
+// ── ❷ PROFIT ──
+function renderProfit(){
+document.getElementById('profit-badge').textContent=activeYear+' 年';
+switchProfit(null,profitType);
+}
+function renderProfitAnnualBox(){
+const box=document.getElementById('profit-annual-box');
+if(profitType==='collab'){
+const total=YD[activeYear].profit.collab.reduce((s,r)=>s+(r.amt||0),0);
+box.innerHTML=`<div class="stat-wide"><div class="sw-label">年度合作總收入</div><div class="sw-val pos">${total?'NT$ '+total.toLocaleString():'—'}</div></div>`;
+}else{
+const data=YD[activeYear].profit[profitType];
+const total=data.reduce((s,r)=>s+(parseFloat(r.profit)||0),0);
+box.innerHTML=`<div class="stat-wide"><div class="sw-label">年度總淨利</div><div class="sw-val ${total>=0?'pos':'neg'}">${total?'NT$ '+total.toLocaleString():'—'}</div></div>`;
+}
+}
+function switchProfit(e,type){
+profitType=type;
+document.querySelectorAll('#profit-page .tab-pill').forEach(t=>t.classList.remove('active'));
+document.querySelectorAll('#profit-page .tab-pill')[{client:0,partner:1,collab:2}[type]].classList.add('active');
+const isCollab=type==='collab';
+document.getElementById('profit-table-wrap').style.display=isCollab?'none':'block';
+document.getElementById('profit-collab-wrap').style.display=isCollab?'block':'none';
+renderProfitAnnualBox();
+if(!isCollab){
+const data=YD[activeYear].profit[type];
+document.getElementById('profit-lbl').textContent={client:'客人',partner:'夥伴'}[type]+' · 月度淨利';
+const tbody=document.getElementById('profit-tbody');tbody.innerHTML='';
+MONTHS.forEach((m,i)=>{
+const r=data[i];
+const tr=document.createElement('tr');
+tr.innerHTML=`<td>${m}</td><td><span class="ed" contenteditable="true">${r.profit}</span></td><td><span class="ed" contenteditable="true">${r.note||''}</span></td>`;
+const cells=tr.querySelectorAll('.ed');
+['profit','note'].forEach((f,fi)=>cells[fi].addEventListener('blur',()=>{data[i][f]=cells[fi].textContent.trim();renderProfitAnnualBox();}));
+tbody.appendChild(tr);
+});
+}else{
+renderCollabList();
+renderCollabMonthly();
+switchCollabView(null,'list');
+}
+}
+function switchCollabView(e,view){
+const listWrap=document.getElementById('collab-list-wrap');
+const monthlyWrap=document.getElementById('collab-monthly-wrap');
+const tabs=document.querySelectorAll('#profit-collab-wrap .tab-row .tab-pill');
+tabs.forEach(t=>t.classList.remove('active'));
+tabs[view==='list'?0:1].classList.add('active');
+listWrap.style.display=view==='list'?'block':'none';
+monthlyWrap.style.display=view==='monthly'?'block':'none';
+}
+function renderCollabList(){
+const list=document.getElementById('collab-list');list.innerHTML='';
+const data=YD[activeYear].profit.collab;
+if(!data.length){list.innerHTML='<div style="text-align:center;color:var(--muted);font-size:.82rem;padding:1.8rem 1rem">🐻 尚無合作紀錄<br>點下方按鈕新增</div>';return;}
+data.forEach((r,idx)=>{
+const fmtDate=r.date?r.date.replace(/-/g,'/'):'—';
+const div=document.createElement('div');div.className='collab-item';
+div.innerHTML=`
+<div class="collab-left">
+<div class="collab-vendor">${r.vendor||'廠商'}</div>
+<div class="collab-meta">📅 ${fmtDate}${r.note?' · '+r.note:''}</div>
+</div>
+<div class="collab-right">
+<div class="collab-amt">NT$ ${(r.amt||0).toLocaleString()}</div>
+<div class="collab-del" onclick="delCollab(${idx})">✕ 刪除</div>
+</div>`;
+list.appendChild(div);
+});
+}
+function renderCollabMonthly(){
+const data=YD[activeYear].profit.collab;
+const byMonth=Array(12).fill(null).map(()=>({total:0,count:0}));
+data.forEach(r=>{
+if(r.date){
+const m=parseInt(r.date.split('-')[1])-1;
+if(m>=0&&m<12){byMonth[m].total+=r.amt||0;byMonth[m].count++;}
+}
+});
+const wrap=document.getElementById('collab-monthly-list');wrap.innerHTML='';
+MONTHS.forEach((m,i)=>{
+const row=document.createElement('div');row.className='month-collab-row';
+row.innerHTML=`<div class="mcr-month">${m}</div><div style="display:flex;align-items:center;gap:.8rem"><div class="mcr-count">${byMonth[i].count?byMonth[i].count+'筆':''}</div><div class="mcr-amt">${byMonth[i].total?'NT$ '+byMonth[i].total.toLocaleString():'—'}</div></div>`;
+wrap.appendChild(row);
+});
+}
+function delCollab(idx){
+if(!confirm('確定刪除此合作紀錄？'))return;
+YD[activeYear].profit.collab.splice(idx,1);
+renderCollabList();renderCollabMonthly();renderProfitAnnualBox();
+}
+
+// ── ❸ PERF ──
+function renderPerf(){
+document.getElementById('perf-badge').textContent=activeYear+' 年';
+switchPerf(null,'summary');
+}
+function switchPerf(e,type){
+perfType=type;
+document.querySelectorAll('#perf-page .tab-pill').forEach(t=>t.classList.remove('active'));
+document.querySelectorAll('#perf-page .tab-pill')[{summary:0,my:1,royal:2}[type]].classList.add('active');
+const wrap=document.getElementById('perf-content');wrap.innerHTML='';
+if(type==='summary'){
+const myT=YD[activeYear].perf.my.reduce((s,r)=>s+(parseFloat(r.amt)||0),0);
+const ryT=YD[activeYear].perf.royal.reduce((s,r)=>s+(parseFloat(r.amt)||0),0);
+const gT=myT+ryT;
+wrap.innerHTML=`
+<div class="stat-wide" style="margin-bottom:.8rem"><div class="sw-label">合計年度業績</div><div class="sw-val pos">${gT?'NT$ '+gT.toLocaleString():'—'}</div></div>
+<div class="sum-cards">
+<div class="sum-card"><div><div class="sum-label">🐻 自己業績</div></div><div class="sum-val">${myT?'NT$ '+myT.toLocaleString():'—'}</div></div>
+<div class="sum-card"><div><div class="sum-label">🐻 直屬皇家業績</div></div><div class="sum-val">${ryT?'NT$ '+ryT.toLocaleString():'—'}</div></div>
+</div>
+<div class="slbl">月度對比</div>
+<table><thead><tr><th>月份</th><th>🐻 自己</th><th>🐻 皇家</th></tr></thead>
+<tbody>${MONTHS.map((m,i)=>`<tr><td>${m}</td><td>${YD[activeYear].perf.my[i].amt?'NT$ '+parseFloat(YD[activeYear].perf.my[i].amt).toLocaleString():'—'}</td><td>${YD[activeYear].perf.royal[i].amt?'NT$ '+parseFloat(YD[activeYear].perf.royal[i].amt).toLocaleString():'—'}</td></tr>`).join('')}</tbody></table>`;
+}else{
+const data=YD[activeYear].perf[type];
+const total=data.reduce((s,r)=>s+(parseFloat(r.amt)||0),0);
+const label=type==='my'?'🐻 自己業績':'🐻 直屬皇家業績';
+wrap.innerHTML=`<div class="stat-wide" style="margin-bottom:1rem"><div class="sw-label">${label}</div><div class="sw-val pos" id="pt-total">${total?'NT$ '+total.toLocaleString():'—'}</div></div>`;
+const tbl=document.createElement('table');
+tbl.innerHTML=`<thead><tr><th>月份</th><th>業績</th><th>備註</th></tr></thead>`;
+const tbody=document.createElement('tbody');
+MONTHS.forEach((m,i)=>{
+const r=data[i];const tr=document.createElement('tr');
+tr.innerHTML=`<td>${m}</td><td><span class="ed" contenteditable="true">${r.amt}</span></td><td><span class="ed" contenteditable="true">${r.note||''}</span></td>`;
+const cells=tr.querySelectorAll('.ed');
+['amt','note'].forEach((f,fi)=>cells[fi].addEventListener('blur',()=>{data[i][f]=cells[fi].textContent.trim();const t=data.reduce((s,x)=>s+(parseFloat(x.amt)||0),0);document.getElementById('pt-total').textContent=t?'NT$ '+t.toLocaleString():'—';}));
+tbody.appendChild(tr);
+});
+tbl.appendChild(tbody);wrap.appendChild(tbl);
+}
+}
+
+// ── ❹ TEAM ──
+function renderTeam(){
+document.getElementById('team-badge').textContent=activeYear+' 年';
+const data=YD[activeYear];
+const tbody=document.getElementById('team-monthly');tbody.innerHTML='';
+// find latest total for stat box
+let latestTotal='—', latestAdded='—';
+for(let i=11;i>=0;i--){if(data.teamMonthly[i].total!==''){latestTotal=data.teamMonthly[i].total;latestAdded=data.teamMonthly[i].added||'—';break;}}
+document.getElementById('team-total').textContent=latestTotal;
+document.getElementById('team-new').textContent=latestAdded;
+MONTHS.forEach((m,i)=>{
+const r=data.teamMonthly[i];const tr=document.createElement('tr');
+tr.innerHTML=`<td>${m}</td><td><span class="ed" contenteditable="true" id="tm-tot-${i}">${r.total}</span></td><td><span class="ed" contenteditable="true" id="tm-add-${i}">${r.added}</span></td><td><span class="ed" contenteditable="true">${r.left}</span></td><td><span class="ed" contenteditable="true">${r.note||''}</span></td>`;
+const cells=tr.querySelectorAll('.ed');
+['total','added','left','note'].forEach((f,fi)=>cells[fi].addEventListener('blur',()=>{
+data.teamMonthly[i][f]=cells[fi].textContent.trim();
+// refresh stat boxes
+let lt='—',la='—';
+for(let j=11;j>=0;j--){if(data.teamMonthly[j].total!==''){lt=data.teamMonthly[j].total;la=data.teamMonthly[j].added||'—';break;}}
+document.getElementById('team-total').textContent=lt;
+document.getElementById('team-new').textContent=la;
+}));
+tbody.appendChild(tr);
+});
+}
+
+// ── ❺ RANK ──
+const RANK_DOTS={intern:'#C4B8AF',r3:'#8AAFC4',r3c:'#7AB09A',r2:'#C4906A',r1:'#C4A96A',royal:'#9B8579'};
+
+function renderUpgrade(){
+document.getElementById('upgrade-badge').textContent=activeYear+' 年';
+const data=YD[activeYear].rankMonthly;
+const listEl=document.getElementById('rank-list');
+listEl.innerHTML='';
+const wrap=document.createElement('div');
+wrap.className='rank-list';
+
+RANKS.forEach((k,i)=>{
+// get latest number
+let latest='';
+for(let j=11;j>=0;j--){if(data[j][k]!==''){latest=data[j][k];break;}}
+
+const card=document.createElement('div');
+card.className='rank-card';
+card.style.animationDelay=(i*.07)+'s';
+card.innerHTML=`
+<div class="rank-dot" style="background:${RANK_DOTS[k]}"></div>
+<div class="rank-card-info">
+<div class="rank-card-name">${RANK_LABELS[k]}</div>
+<div class="rank-card-sub">${latest!==''?'目前人數':'尚未記錄'}</div>
+</div>
+${latest!==''?`<div class="rank-card-right"><div class="rank-card-num">${latest}</div><div class="rank-card-unit">位</div></div>`:''}
+<div class="rank-card-arrow">›</div>
+`;
+card.addEventListener('click',()=>openRankDetail(k));
+wrap.appendChild(card);
+});
+listEl.appendChild(wrap);
+}
+
+function openRankDetail(rank){
+const data=YD[activeYear].rankMonthly;
+document.getElementById('rank-detail-title').textContent=RANK_LABELS[rank];
+document.getElementById('rank-detail-badge').textContent=activeYear+' 年';
+goTo('rank-detail-page');
+
+const body=document.getElementById('rank-detail-body');
+body.innerHTML='';
+
+// latest stat
+let latest='—';
+for(let i=11;i>=0;i--){if(data[i][rank]!==''){latest=data[i][rank];break;}}
+const stat=document.createElement('div');
+stat.className='rd-stat';
+stat.innerHTML=`<div class="rd-stat-label">目前人數</div><div class="rd-stat-val" style="color:${RANK_DOTS[rank]}">${latest} 位</div>`;
+body.appendChild(stat);
+
+// month table
+const lbl=document.createElement('div');lbl.className='slbl';lbl.textContent='月度人數紀錄';
+body.appendChild(lbl);
+
+const tbl=document.createElement('table');
+tbl.innerHTML=`<thead><tr><th>月份</th><th>${RANK_LABELS[rank]} 人數</th></tr></thead>`;
+const tbody=document.createElement('tbody');
+MONTHS.forEach((m,i)=>{
+const tr=document.createElement('tr');
+tr.innerHTML=`<td>${m}</td><td><span class="ed" contenteditable="true" id="rd-${rank}-${i}">${data[i][rank]}</span></td>`;
+tbody.appendChild(tr);
+tr.querySelector(`#rd-${rank}-${i}`).addEventListener('blur',()=>{
+data[i][rank]=document.getElementById(`rd-${rank}-${i}`).textContent.trim();
+// refresh stat
+let lat='—';
+for(let j=11;j>=0;j--){if(data[j][rank]!==''){lat=data[j][rank];break;}}
+stat.querySelector('.rd-stat-val').textContent=lat+' 位';
+// refresh list
+renderUpgrade();
+});
+});
+tbl.appendChild(tbody);
+body.appendChild(tbl);
+}
+
+// ── COPY SOURCE CODE ──
+function copySourceCode(){
+const code=document.documentElement.outerHTML;
+navigator.clipboard.writeText(code).then(()=>{
+showToast('✅ 程式碼已複製！');
+}).catch(()=>{
+// fallback
+const ta=document.createElement('textarea');
+ta.value=code;ta.style.position='fixed';ta.style.opacity='0';
+document.body.appendChild(ta);ta.select();
+document.execCommand('copy');document.body.removeChild(ta);
+showToast('✅ 程式碼已複製！');
+});
+}
+function showToast(msg){
+let t=document.getElementById('copy-toast');
+if(!t){t=document.createElement('div');t.id='copy-toast';t.className='copy-toast';document.body.appendChild(t);}
+t.textContent=msg;t.classList.add('show');
+setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+// ── INIT ──
+initYear(TODAY_YEAR);
+renderYears();
+</script>
+
+
+</body></html>
