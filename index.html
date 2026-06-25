@@ -359,7 +359,13 @@ realParent.postMessage({ type: 'console', message: 'Uncaught Error: ' + event.me
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>年度復盤</title>
+<title>MORE 年度復盤表</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="年度復盤">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='115' fill='%23E8DDD6'/%3E%3Crect x='30' y='30' width='452' height='452' rx='95' fill='%23EDE6DF'/%3E%3C!-- notebook --%3E%3Crect x='100' y='210' width='290' height='220' rx='18' fill='%23FAF7F3' transform='rotate(-6 256 320)'/%3E%3Crect x='240' y='205' width='170' height='220' rx='18' fill='%23F5F0EA' transform='rotate(-6 256 320)'/%3E%3C!-- spine dots --%3E%3Ccircle cx='248' cy='248' r='7' fill='%23C9A880'/%3E%3Ccircle cx='248' cy='278' r='7' fill='%23C9A880'/%3E%3Ccircle cx='248' cy='308' r='7' fill='%23C9A880'/%3E%3Ccircle cx='248' cy='338' r='7' fill='%23C9A880'/%3E%3Ccircle cx='248' cy='368' r='7' fill='%23C9A880'/%3E%3C!-- bars --%3E%3Crect x='275' y='310' width='22' height='55' rx='5' fill='%23C9BFB6' opacity='.6'/%3E%3Crect x='305' y='290' width='22' height='75' rx='5' fill='%23B5A89E' opacity='.7'/%3E%3Crect x='335' y='270' width='22' height='95' rx='5' fill='%239B8579' opacity='.85'/%3E%3C!-- text lines --%3E%3Crect x='118' y='268' width='100' height='10' rx='5' fill='%23C9BFB6' opacity='.6' transform='rotate(-6 256 320)'/%3E%3Crect x='118' y='295' width='80' height='10' rx='5' fill='%23C9BFB6' opacity='.5' transform='rotate(-6 256 320)'/%3E%3Crect x='118' y='322' width='90' height='10' rx='5' fill='%23C9BFB6' opacity='.5' transform='rotate(-6 256 320)'/%3E%3C!-- 年 text --%3E%3Ctext x='145' y='195' font-family='serif' font-size='135' font-weight='900' fill='%23C9BFB6' opacity='.25'%3E年%3C/text%3E%3C!-- stars --%3E%3Ctext x='82' y='135' font-size='28' fill='%23C9A880' opacity='.7'%3E✦%3C/text%3E%3Ctext x='390' y='115' font-size='20' fill='%23C9A880' opacity='.6'%3E✦%3C/text%3E%3Ctext x='410' y='165' font-size='14' fill='%23C9A880' opacity='.5'%3E✦%3C/text%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='115' fill='%23E8DDD6'/%3E%3Ctext x='145' y='320' font-family='serif' font-size='280' font-weight='900' fill='%239B8579'%3E年%3C/text%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;400;600;900&amp;family=Playfair+Display:wght@400;700;900&amp;display=swap" rel="stylesheet">
 <style>
 :root{
@@ -416,7 +422,8 @@ body{font-family:'Noto Serif TC',serif;background:var(--bg);color:var(--ink);ove
 .modal-field label{display:block;font-size:.68rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:.4rem;}
 .modal-inp{width:100%;padding:.78rem 1rem;border:1.5px solid var(--border);border-radius:12px;background:var(--bg);font-family:'Noto Serif TC',serif;font-size:.95rem;color:var(--ink);outline:none;transition:border-color .2s;}
 .modal-inp:focus{border-color:var(--gold);}
-input[type="date"].modal-inp{color:var(--ink);}
+input[type="date"].modal-inp{color:var(--ink);font-size:.95rem;text-align:left;}
+input[type="date"]::-webkit-calendar-picker-indicator{opacity:.4;cursor:pointer;float:right;}
 .modal-btns{display:flex;gap:.7rem;margin-top:1.4rem;}
 .modal-ok{flex:1;padding:.72rem;background:var(--gold);color:white;border:none;border-radius:12px;font-family:'Noto Serif TC',serif;font-size:.9rem;cursor:pointer;transition:opacity .2s;}
 .modal-ok:hover{opacity:.82;}
@@ -504,6 +511,19 @@ tbody td{padding:.68rem .85rem;font-size:.84rem;color:var(--soft);}
 .tab-pill{padding:.42rem 1.1rem;border:1px solid var(--border);cursor:pointer;font-size:.76rem;transition:all .22s;background:var(--card);border-radius:20px;color:var(--soft);font-family:'Noto Serif TC',serif;}
 .tab-pill.active{background:var(--gold);color:white;border-color:var(--gold);}
 
+/* COLLAB MONTH CARDS */
+.collab-month-list{display:flex;flex-direction:column;gap:.75rem;}
+.collab-month-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1rem 1.2rem;display:flex;align-items:center;gap:1rem;cursor:pointer;transition:all .22s;}
+.collab-month-card:hover{transform:translateX(4px);box-shadow:0 6px 18px var(--shadow);}
+.cmc-left{flex:1;}
+.cmc-month{font-size:1rem;font-weight:600;color:var(--ink);margin-bottom:.15rem;}
+.cmc-count{font-size:.72rem;color:var(--muted);}
+.cmc-right{display:flex;flex-direction:column;align-items:flex-end;gap:.1rem;flex-shrink:0;margin-right:.3rem;}
+.cmc-total{font-family:'Playfair Display',serif;font-size:1.15rem;color:var(--accent);font-weight:700;line-height:1;}
+.cmc-unit{font-size:.6rem;color:var(--muted);}
+.cmc-arrow{color:var(--border);font-size:1rem;flex-shrink:0;transition:color .2s;}
+.collab-month-card:hover .cmc-arrow{color:var(--gold);}
+
 /* COLLAB */
 .collab-list{display:flex;flex-direction:column;gap:.65rem;}
 .collab-item{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1rem 1.1rem;display:flex;align-items:flex-start;gap:.85rem;}
@@ -512,8 +532,8 @@ tbody td{padding:.68rem .85rem;font-size:.84rem;color:var(--soft);}
 .collab-meta{font-size:.72rem;color:var(--muted);}
 .collab-right{display:flex;flex-direction:column;align-items:flex-end;gap:.3rem;flex-shrink:0;}
 .collab-amt{font-family:'Playfair Display',serif;font-size:1.05rem;color:var(--accent);font-weight:700;}
-.collab-del{font-size:.68rem;color:var(--border);cursor:pointer;padding:.2rem;transition:color .18s;line-height:1;}
-.collab-del:hover{color:var(--red);}
+.collab-del{font-size:.75rem;color:var(--muted);cursor:pointer;padding:.4rem .7rem;transition:all .18s;line-height:1;border:1px solid var(--border);border-radius:8px;background:var(--bg);margin-top:.2rem;}
+.collab-del:hover{color:var(--red);border-color:var(--red);background:#FFF0F0;}
 
 /* MONTHLY SUMMARY TABLE for collab */
 .month-collab-row{display:flex;justify-content:space-between;align-items:center;padding:.6rem .85rem;border-bottom:1px solid var(--border);}
@@ -632,7 +652,7 @@ tbody td{padding:.68rem .85rem;font-size:.84rem;color:var(--soft);}
 <div class="modal-ttl">🐻 新增合作紀錄</div>
 <div class="modal-field">
 <label>合作日期</label>
-<input class="modal-inp" id="c-date" type="date">
+<input class="modal-inp" id="c-date" type="text" placeholder="例：2026/06/25" inputmode="numeric">
 </div>
 <div class="modal-field">
 <label>廠商名稱</label>
@@ -654,6 +674,22 @@ tbody td{padding:.68rem .85rem;font-size:.84rem;color:var(--soft);}
 </div>
 
 <input type="file" id="file-inp" accept=".json" style="display:none" onchange="doImport(event)">
+
+<!-- MODAL: Import paste -->
+<div class="overlay" id="import-modal" onclick="if(event.target===this)closeImportModal()">
+<div class="modal-box">
+<div class="modal-drag"></div>
+<div class="modal-ttl">⬆️ 匯入資料</div>
+<div class="modal-field">
+<label>將備忘錄的資料貼上</label>
+<textarea id="import-text" style="width:100%;height:120px;padding:.75rem 1rem;border:1.5px solid var(--border);border-radius:12px;background:var(--bg);font-family:'Noto Serif TC',serif;font-size:.82rem;color:var(--ink);outline:none;resize:none;line-height:1.5;" placeholder="把複製的資料貼在這裡..."></textarea>
+</div>
+<div class="modal-btns">
+<button class="modal-cancel" onclick="closeImportModal()">取消</button>
+<button class="modal-ok" onclick="confirmImport()">匯入 →</button>
+</div>
+</div>
+</div>
 
 <!-- ══ HOME ══ -->
 <div id="home" class="page">
@@ -682,23 +718,47 @@ tbody td{padding:.68rem .85rem;font-size:.84rem;color:var(--soft);}
 </div>
 <div class="settings-body">
 <div class="settings-section">
-<div class="settings-title">資料管理</div>
+<div class="settings-title">資料與同步</div>
 <div class="settings-row">
-<div class="settings-item" onclick="doExport()">
-<div class="si-icon">⬇️</div>
-<div class="si-info"><div class="si-title">匯出資料</div><div class="si-desc">將所有年份資料儲存為 JSON 檔案</div></div>
-<div class="si-arrow">›</div>
+
+<div class="settings-item" style="cursor:default;">
+<div class="si-info">
+<div class="si-title">資料儲存位置</div>
+<div class="si-desc">本機儲存，僅這支手機看得到，不是雲端</div>
 </div>
-<div class="settings-item" onclick="document.getElementById('file-inp').click()">
-<div class="si-icon">⬆️</div>
-<div class="si-info"><div class="si-title">匯入資料</div><div class="si-desc">從 JSON 檔案還原所有復盤資料</div></div>
-<div class="si-arrow">›</div>
 </div>
-<div class="settings-item" onclick="copySourceCode()">
-<div class="si-icon">📋</div>
-<div class="si-info"><div class="si-title">複製程式碼</div><div class="si-desc">複製完整 HTML 原始碼到剪貼簿</div></div>
-<div class="si-arrow">›</div>
+
+<div class="settings-item" style="justify-content:space-between;">
+<div class="si-info">
+<div class="si-title">匯出資料</div>
+<div class="si-desc">下載完整 HTML 檔案到手機「檔案 App → 下載」</div>
 </div>
+<button onclick="doExport()" style="flex-shrink:0;padding:.55rem 1.3rem;border:1.5px solid var(--border);border-radius:20px;background:var(--card);font-family:'Noto Serif TC',serif;font-size:.85rem;color:var(--ink);cursor:pointer;white-space:nowrap;">匯出</button>
+</div>
+
+<div class="settings-item" style="justify-content:space-between;">
+<div class="si-info">
+<div class="si-title">匯入資料</div>
+<div class="si-desc">從備份 HTML 或 JSON 檔案還原資料</div>
+</div>
+<button onclick="document.getElementById('file-inp').click()" style="flex-shrink:0;padding:.55rem 1.3rem;border:1.5px solid var(--border);border-radius:20px;background:var(--card);font-family:'Noto Serif TC',serif;font-size:.85rem;color:var(--ink);cursor:pointer;white-space:nowrap;">匯入</button>
+</div>
+
+<div class="settings-item" style="cursor:default;">
+<div class="si-info">
+<div class="si-title">加到主畫面</div>
+<div class="si-desc">Safari → 分享 → 加入主畫面，像 App 一樣使用</div>
+</div>
+</div>
+
+<div class="settings-item" style="justify-content:space-between;">
+<div class="si-info">
+<div class="si-title">複製程式碼</div>
+<div class="si-desc">複製完整 HTML 原始碼到剪貼簿</div>
+</div>
+<button onclick="copySourceCode()" style="flex-shrink:0;padding:.55rem 1.3rem;border:1.5px solid var(--border);border-radius:20px;background:var(--card);font-family:'Noto Serif TC',serif;font-size:.85rem;color:var(--ink);cursor:pointer;white-space:nowrap;">複製</button>
+</div>
+
 </div>
 </div>
 <div class="settings-section">
@@ -808,20 +868,24 @@ tbody td{padding:.68rem .85rem;font-size:.84rem;color:var(--soft);}
 </div>
 <!-- collab -->
 <div id="profit-collab-wrap" style="display:none">
-<!-- month summary -->
-<div class="tab-row" style="margin-bottom:.9rem;">
-<div class="tab-pill active" onclick="switchCollabView(event,'list')">📋 全部紀錄</div>
-<div class="tab-pill" onclick="switchCollabView(event,'monthly')">📅 月份統計</div>
-</div>
-<div id="collab-list-wrap">
-<div class="collab-list" id="collab-list"></div>
-<button class="dashed-btn" onclick="openCollabModal()">＋ 新增合作紀錄</button>
-</div>
-<div id="collab-monthly-wrap" style="display:none">
-<div class="slbl">每月合作收入</div>
-<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;" id="collab-monthly-list"></div>
+<div class="slbl">選擇月份</div>
+<div id="collab-month-list"></div>
 </div>
 </div>
+</div>
+
+<!-- ══ COLLAB DETAIL (月份內廠商) ══ -->
+<div id="collab-detail-page" class="page">
+<div class="top-bar">
+<div class="top-back" onclick="goTo('profit-page');switchProfit(null,'collab')">←</div>
+<div class="top-title" id="collab-detail-title">合作紀錄</div>
+<div class="top-badge" id="collab-detail-badge"></div>
+</div>
+<div class="inner-body">
+<div id="collab-detail-stat"></div>
+<div class="slbl">本月合作廠商</div>
+<div class="collab-list" id="collab-detail-list"></div>
+<button class="dashed-btn" onclick="openCollabModal()" style="margin-top:1rem;">＋ 新增合作紀錄</button>
 </div>
 </div>
 
@@ -985,7 +1049,8 @@ document.getElementById('modal-inp').addEventListener('keydown',e=>{if(e.key==='
 
 // ── MODAL: collab ──
 function openCollabModal(){
-const today=new Date().toISOString().split('T')[0];
+const now=new Date();
+const today=`${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')}`;
 document.getElementById('c-date').value=today;
 document.getElementById('c-vendor').value='';
 document.getElementById('c-amt').value='';
@@ -1001,19 +1066,67 @@ const amt=parseFloat(document.getElementById('c-amt').value)||0;
 const note=document.getElementById('c-note').value.trim();
 if(!vendor){alert('請輸入廠商名稱');return;}
 YD[activeYear].profit.collab.push({date,vendor,amt,note});
-YD[activeYear].profit.collab.sort((a,b)=>a.date.localeCompare(b.date));
+YD[activeYear].profit.collab.sort((a,b)=>(a.date||'').localeCompare(b.date||''));
 closeCollabModal();
-renderCollabList();
-renderCollabMonthly();
+renderCollabDetail();
+renderCollabMonthList();
 renderProfitAnnualBox();
 }
 
 // ── EXPORT / IMPORT ──
 function doExport(){
-const blob=new Blob([JSON.stringify({years,YD},null,2)],{type:'application/json'});
-const url=URL.createObjectURL(blob);
-const a=document.createElement('a');a.href=url;a.download=`annual-review-backup.json`;a.click();
+const json = JSON.stringify({years, YD}, null, 2);
+const blob = new Blob([json], {type:'application/json;charset=utf-8'});
+const url = URL.createObjectURL(blob);
+const a = document.createElement('a');
+const d = new Date();
+const stamp = d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0');
+a.href = url;
+a.download = 'MORE\u5e74\u5ea6\u5fa9\u76e4_' + stamp + '.json';
+document.body.appendChild(a);
+a.click();
+document.body.removeChild(a);
 URL.revokeObjectURL(url);
+showToast('\u2705 \u5df2\u532f\u51fa\uff01\u8acb\u5230\u300c\u6a94\u6848 App \u2192 \u4e0b\u8f09\u300d\u67e5\u770b');
+}
+function doImport(e){
+const file = e.target.files[0]; if(!file) return;
+const reader = new FileReader();
+reader.onload = ev => {
+try{
+const text = ev.target.result;
+const data = JSON.parse(text);
+if(data.years && data.YD){
+Object.assign(YD, data.YD);
+data.years.forEach(y => { if(!years.includes(y)) years.push(y); });
+renderYears();
+showToast('\u2705 \u5320\u5165\u6210\u529f\uff01');
+} else { alert('\u683c\u5f0f\u932f\u8aa4\uff0c\u8acb\u78ba\u8a8d\u6a94\u6848'); }
+} catch(err){ alert('\u5320\u5165\u5931\u6557\uff0c\u8acb\u78ba\u8a8d\u6a94\u6848\u683c\u5f0f'); }
+};
+reader.readAsText(file);
+e.target.value = '';
+}
+function openImportModal(){
+document.getElementById('import-text').value='';
+document.getElementById('import-modal').classList.add('open');
+setTimeout(()=>document.getElementById('import-text').focus(),100);
+}
+function closeImportModal(){
+document.getElementById('import-modal').classList.remove('open');
+}
+function confirmImport(){
+const text=document.getElementById('import-text').value.trim();
+if(!text){alert('請貼上資料');return;}
+try{
+const data=JSON.parse(text);
+if(data.years&&data.YD){
+Object.assign(YD,data.YD);
+data.years.forEach(y=>{if(!years.includes(y))years.push(y);});
+renderYears();closeImportModal();
+showToast('✅ 匯入成功！');
+}else{alert('格式錯誤，請確認資料');}
+}catch{alert('匯入失敗，請確認格式正確');}
 }
 function doImport(e){
 const file=e.target.files[0];if(!file)return;
@@ -1024,7 +1137,7 @@ const data=JSON.parse(ev.target.result);
 if(data.years&&data.YD){
 Object.assign(YD,data.YD);
 data.years.forEach(y=>{if(!years.includes(y))years.push(y);});
-renderYears();alert('✅ 匯入成功！');
+renderYears();showToast('✅ 匯入成功！');
 }else{alert('格式錯誤');}
 }catch{alert('匯入失敗');}
 };
@@ -1128,59 +1241,88 @@ const cells=tr.querySelectorAll('.ed');
 tbody.appendChild(tr);
 });
 }else{
-renderCollabList();
-renderCollabMonthly();
-switchCollabView(null,'list');
+renderCollabMonthList();
 }
 }
-function switchCollabView(e,view){
-const listWrap=document.getElementById('collab-list-wrap');
-const monthlyWrap=document.getElementById('collab-monthly-wrap');
-const tabs=document.querySelectorAll('#profit-collab-wrap .tab-row .tab-pill');
-tabs.forEach(t=>t.classList.remove('active'));
-tabs[view==='list'?0:1].classList.add('active');
-listWrap.style.display=view==='list'?'block':'none';
-monthlyWrap.style.display=view==='monthly'?'block':'none';
-}
-function renderCollabList(){
-const list=document.getElementById('collab-list');list.innerHTML='';
+let activeCollabMonth=new Date().getMonth();
+
+function renderCollabMonthList(){
 const data=YD[activeYear].profit.collab;
-if(!data.length){list.innerHTML='<div style="text-align:center;color:var(--muted);font-size:.82rem;padding:1.8rem 1rem">🐻 尚無合作紀錄<br>點下方按鈕新增</div>';return;}
-data.forEach((r,idx)=>{
-const fmtDate=r.date?r.date.replace(/-/g,'/'):'—';
+const byMonth=Array(12).fill(null).map(()=>({total:0,count:0}));
+data.forEach(r=>{
+if(r.date){const parts=r.date.replace(/\//g,'-').split('-');if(parts.length>=2){const m=parseInt(parts[1])-1;if(m>=0&&m<12){byMonth[m].total+=r.amt||0;byMonth[m].count++;}}}
+});
+const wrap=document.getElementById('collab-month-list');wrap.innerHTML='';
+const list=document.createElement('div');list.className='collab-month-list';
+MONTHS.forEach((m,i)=>{
+const card=document.createElement('div');card.className='collab-month-card';
+const hasData=byMonth[i].count>0;
+card.innerHTML=`
+<div class="cmc-left">
+<div class="cmc-month">${m}</div>
+<div class="cmc-count">${hasData?byMonth[i].count+'筆合作':'尚無紀錄'}</div>
+</div>
+${hasData?`<div class="cmc-right"><div class="cmc-total">NT$ ${byMonth[i].total.toLocaleString()}</div></div>`:''}
+<div class="cmc-arrow">›</div>`;
+card.addEventListener('click',()=>openCollabDetail(i));
+list.appendChild(card);
+});
+wrap.appendChild(list);
+}
+
+function openCollabDetail(monthIdx){
+activeCollabMonth=monthIdx;
+document.getElementById('collab-detail-title').textContent=MONTHS[monthIdx]+' 合作紀錄';
+document.getElementById('collab-detail-badge').textContent=activeYear+' 年';
+goTo('collab-detail-page');
+renderCollabDetail();
+}
+
+function renderCollabDetail(){
+const data=YD[activeYear].profit.collab;
+const monthData=data.filter(r=>{
+if(!r.date)return false;
+const parts=r.date.replace(/\//g,'-').split('-');
+return parts.length>=2&&parseInt(parts[1])-1===activeCollabMonth;
+});
+const total=monthData.reduce((s,r)=>s+(r.amt||0),0);
+document.getElementById('collab-detail-stat').innerHTML=`
+<div class="stat-wide" style="margin-bottom:1rem">
+<div class="sw-label">本月合作總收入</div>
+<div class="sw-val pos">${total?'NT$ '+total.toLocaleString():'—'}</div>
+</div>`;
+const listEl=document.getElementById('collab-detail-list');listEl.innerHTML='';
+if(!monthData.length){listEl.innerHTML='<div style="text-align:center;color:var(--muted);font-size:.82rem;padding:1.8rem 1rem">🐻 本月尚無合作紀錄</div>';return;}
+monthData.forEach(r=>{
+const globalIdx=data.indexOf(r);
 const div=document.createElement('div');div.className='collab-item';
 div.innerHTML=`
 <div class="collab-left">
 <div class="collab-vendor">${r.vendor||'廠商'}</div>
-<div class="collab-meta">📅 ${fmtDate}${r.note?' · '+r.note:''}</div>
+<div class="collab-meta">📅 ${r.date||'—'}${r.note?' · '+r.note:''}</div>
 </div>
 <div class="collab-right">
 <div class="collab-amt">NT$ ${(r.amt||0).toLocaleString()}</div>
-<div class="collab-del" onclick="delCollab(${idx})">✕ 刪除</div>
+<div class="collab-del">✕ 刪除</div>
 </div>`;
-list.appendChild(div);
+div.querySelector('.collab-del').addEventListener('click',(function(idx){
+return function(e){
+e.stopPropagation();
+if(!confirm('確定要刪除「'+(data[idx].vendor||'此紀錄')+'」嗎？'))return;
+data.splice(idx,1);
+renderCollabDetail();
+renderCollabMonthList();
+renderProfitAnnualBox();
+};
+})(globalIdx));
+listEl.appendChild(div);
 });
 }
-function renderCollabMonthly(){
-const data=YD[activeYear].profit.collab;
-const byMonth=Array(12).fill(null).map(()=>({total:0,count:0}));
-data.forEach(r=>{
-if(r.date){
-const m=parseInt(r.date.split('-')[1])-1;
-if(m>=0&&m<12){byMonth[m].total+=r.amt||0;byMonth[m].count++;}
-}
-});
-const wrap=document.getElementById('collab-monthly-list');wrap.innerHTML='';
-MONTHS.forEach((m,i)=>{
-const row=document.createElement('div');row.className='month-collab-row';
-row.innerHTML=`<div class="mcr-month">${m}</div><div style="display:flex;align-items:center;gap:.8rem"><div class="mcr-count">${byMonth[i].count?byMonth[i].count+'筆':''}</div><div class="mcr-amt">${byMonth[i].total?'NT$ '+byMonth[i].total.toLocaleString():'—'}</div></div>`;
-wrap.appendChild(row);
-});
-}
+
 function delCollab(idx){
 if(!confirm('確定刪除此合作紀錄？'))return;
 YD[activeYear].profit.collab.splice(idx,1);
-renderCollabList();renderCollabMonthly();renderProfitAnnualBox();
+renderCollabDetail();renderCollabMonthList();renderProfitAnnualBox();
 }
 
 // ── ❸ PERF ──
@@ -1351,6 +1493,8 @@ setTimeout(()=>t.classList.remove('show'),2200);
 // ── INIT ──
 initYear(TODAY_YEAR);
 renderYears();
+// 確保每次開啟都從首頁開始
+goTo('home');
 </script>
 
 
