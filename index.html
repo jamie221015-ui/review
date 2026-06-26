@@ -652,7 +652,23 @@ tbody td{padding:.68rem .85rem;font-size:.84rem;color:var(--soft);}
 <div class="modal-ttl">🐻 新增合作紀錄</div>
 <div class="modal-field">
 <label>合作日期</label>
-<input class="modal-inp" id="c-date" type="text" placeholder="例：2026/06/25" inputmode="numeric">
+<!-- Custom calendar trigger -->
+<div id="c-date-display" onclick="toggleCalendar()" class="modal-inp" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;">
+<span id="c-date-text" style="color: var(--ink);">2026/06/26</span>
+<span style="color:var(--muted);">📅</span>
+</div>
+<!-- Calendar popup -->
+<div id="cal-popup" style="display: none; background: var(--card); border: 1px solid var(--border); border-radius: 14px; margin-top: 0.5rem; padding: 1rem; overflow: hidden;">
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.8rem;">
+<button onclick="calPrev()" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--ink);padding:.2rem .5rem;">‹</button>
+<span id="cal-header" style="font-weight:600;font-size:.9rem;color:var(--ink);">2026年 4月</span>
+<button onclick="calNext()" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--ink);padding:.2rem .5rem;">›</button>
+</div>
+<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;margin-bottom:.4rem;">
+<div style="font-size:.65rem;color:var(--muted);">日</div><div style="font-size:.65rem;color:var(--muted);">一</div><div style="font-size:.65rem;color:var(--muted);">二</div><div style="font-size:.65rem;color:var(--muted);">三</div><div style="font-size:.65rem;color:var(--muted);">四</div><div style="font-size:.65rem;color:var(--muted);">五</div><div style="font-size:.65rem;color:var(--muted);">六</div>
+</div>
+<div id="cal-days" style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;text-align:center;"><div></div><div></div><div></div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">1</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">2</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">3</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">4</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">5</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">6</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">7</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">8</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">9</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">10</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">11</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">12</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">13</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">14</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">15</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">16</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">17</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">18</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">19</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">20</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">21</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">22</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">23</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">24</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">25</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">26</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">27</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">28</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">29</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">30</div></div>
+</div>
 </div>
 <div class="modal-field">
 <label>廠商名稱</label>
@@ -660,7 +676,7 @@ tbody td{padding:.68rem .85rem;font-size:.84rem;color:var(--soft);}
 </div>
 <div class="modal-field">
 <label>匯款金額（NT$）</label>
-<input class="modal-inp" id="c-amt" type="number" placeholder="0">
+<input class="modal-inp" id="c-amt" type="number" placeholder="0" inputmode="numeric">
 </div>
 <div class="modal-field">
 <label>備註（選填）</label>
@@ -786,27 +802,27 @@ tbody td{padding:.68rem .85rem;font-size:.84rem;color:var(--soft);}
 </div>
 </div>
 <div class="dash-body">
-<div class="dash-card" style="--i:1" onclick="goInner('fans-page')">
+<div class="dash-card" style="--i: 1;" onclick="goInner('fans-page')">
 <div class="dc-icon">📊</div>
 <div class="dc-info"><div class="dc-title">粉絲復盤表</div><div class="dc-desc">IG · 臉書 · 抖音 · 小紅書 · Threads</div></div>
 <div class="dc-arrow">›</div>
 </div>
-<div class="dash-card" style="--i:2" onclick="goInner('profit-page')">
+<div class="dash-card" style="--i: 2;" onclick="goInner('profit-page')">
 <div class="dc-icon">💰</div>
 <div class="dc-info"><div class="dc-title">淨利記錄表</div><div class="dc-desc">客人 · 夥伴 · 合作 淨利</div></div>
 <div class="dc-arrow">›</div>
 </div>
-<div class="dash-card" style="--i:3" onclick="goInner('perf-page')">
+<div class="dash-card" style="--i: 3;" onclick="goInner('perf-page')">
 <div class="dc-icon">💎</div>
 <div class="dc-info"><div class="dc-title">團隊年度業績</div><div class="dc-desc">總合 · 自己業績 · 直屬皇家業績</div></div>
 <div class="dc-arrow">›</div>
 </div>
-<div class="dash-card" style="--i:4" onclick="goInner('team-page')">
+<div class="dash-card" style="--i: 4;" onclick="goInner('team-page')">
 <div class="dc-icon">👥</div>
 <div class="dc-info"><div class="dc-title">直屬團隊人數</div><div class="dc-desc">成員名單 · 月度人數統計</div></div>
 <div class="dc-arrow">›</div>
 </div>
-<div class="dash-card" style="--i:5" onclick="goInner('upgrade-page')">
+<div class="dash-card" style="--i: 5;" onclick="goInner('upgrade-page')">
 <div class="dc-icon">📈</div>
 <div class="dc-info"><div class="dc-title">各級別人數統計</div><div class="dc-desc">總覽圖表 · 實習 · 三級 · 二級 · 一級 · 皇家</div></div>
 <div class="dc-arrow">›</div>
@@ -819,7 +835,7 @@ tbody td{padding:.68rem .85rem;font-size:.84rem;color:var(--soft);}
 <div class="top-bar">
 <div class="top-back" onclick="goTo('dashboard')">←</div>
 <div class="top-title">粉絲復盤表</div>
-<div class="top-badge" id="fans-badge"></div>
+<div class="top-badge" id="fans-badge">2026 年</div>
 </div>
 <div class="inner-body">
 <div class="slbl">選擇平台</div>
@@ -832,7 +848,7 @@ tbody td{padding:.68rem .85rem;font-size:.84rem;color:var(--soft);}
 <div class="top-bar">
 <div class="top-back" onclick="goTo('fans-page')">←</div>
 <div class="top-title" id="fans-detail-title">IG</div>
-<div class="top-badge" id="fans-detail-badge"></div>
+<div class="top-badge" id="fans-detail-badge">2026 年</div>
 </div>
 <div class="inner-body">
 <div class="stat-grid" id="fans-stats"></div>
@@ -849,27 +865,99 @@ tbody td{padding:.68rem .85rem;font-size:.84rem;color:var(--soft);}
 <div class="top-bar">
 <div class="top-back" onclick="goTo('dashboard')">←</div>
 <div class="top-title">🐻 淨利記錄表</div>
-<div class="top-badge" id="profit-badge"></div>
+<div class="top-badge" id="profit-badge">2026 年</div>
 </div>
 <div class="inner-body">
 <div class="tab-row">
-<div class="tab-pill active" onclick="switchProfit(event,'client')">🐻 客人</div>
+<div class="tab-pill" onclick="switchProfit(event,'client')">🐻 客人</div>
 <div class="tab-pill" onclick="switchProfit(event,'partner')">🐻 夥伴</div>
-<div class="tab-pill" onclick="switchProfit(event,'collab')">🐻 合作</div>
+<div class="tab-pill active" onclick="switchProfit(event,'collab')">🐻 合作</div>
 </div>
-<div id="profit-annual-box"></div>
+<div id="profit-annual-box"><div class="stat-wide"><div class="sw-label">年度合作總收入</div><div class="sw-val pos">NT$ 66</div></div></div>
 <!-- client/partner -->
-<div id="profit-table-wrap">
-<div class="slbl" id="profit-lbl"></div>
+<div id="profit-table-wrap" style="display: none;">
+<div class="slbl" id="profit-lbl">客人 · 月度淨利</div>
 <table>
 <thead><tr><th>月份</th><th>淨利</th><th>備註</th></tr></thead>
-<tbody id="profit-tbody"></tbody>
+<tbody id="profit-tbody"><tr><td>1月</td><td><span class="ed" contenteditable="true"></span></td><td><span class="ed" contenteditable="true"></span></td></tr><tr><td>2月</td><td><span class="ed" contenteditable="true"></span></td><td><span class="ed" contenteditable="true"></span></td></tr><tr><td>3月</td><td><span class="ed" contenteditable="true"></span></td><td><span class="ed" contenteditable="true"></span></td></tr><tr><td>4月</td><td><span class="ed" contenteditable="true"></span></td><td><span class="ed" contenteditable="true"></span></td></tr><tr><td>5月</td><td><span class="ed" contenteditable="true"></span></td><td><span class="ed" contenteditable="true"></span></td></tr><tr><td>6月</td><td><span class="ed" contenteditable="true"></span></td><td><span class="ed" contenteditable="true"></span></td></tr><tr><td>7月</td><td><span class="ed" contenteditable="true"></span></td><td><span class="ed" contenteditable="true"></span></td></tr><tr><td>8月</td><td><span class="ed" contenteditable="true"></span></td><td><span class="ed" contenteditable="true"></span></td></tr><tr><td>9月</td><td><span class="ed" contenteditable="true"></span></td><td><span class="ed" contenteditable="true"></span></td></tr><tr><td>10月</td><td><span class="ed" contenteditable="true"></span></td><td><span class="ed" contenteditable="true"></span></td></tr><tr><td>11月</td><td><span class="ed" contenteditable="true"></span></td><td><span class="ed" contenteditable="true"></span></td></tr><tr><td>12月</td><td><span class="ed" contenteditable="true"></span></td><td><span class="ed" contenteditable="true"></span></td></tr></tbody>
 </table>
 </div>
 <!-- collab -->
-<div id="profit-collab-wrap" style="display:none">
+<div id="profit-collab-wrap" style="display: block;">
 <div class="slbl">選擇月份</div>
-<div id="collab-month-list"></div>
+<div id="collab-month-list"><div class="collab-month-list"><div class="collab-month-card">
+<div class="cmc-left">
+<div class="cmc-month">1月</div>
+<div class="cmc-count">1筆合作</div>
+</div>
+<div class="cmc-right"><div class="cmc-total">NT$ 22</div></div>
+<div class="cmc-arrow">›</div></div><div class="collab-month-card">
+<div class="cmc-left">
+<div class="cmc-month">2月</div>
+<div class="cmc-count">尚無紀錄</div>
+</div>
+
+<div class="cmc-arrow">›</div></div><div class="collab-month-card">
+<div class="cmc-left">
+<div class="cmc-month">3月</div>
+<div class="cmc-count">尚無紀錄</div>
+</div>
+
+<div class="cmc-arrow">›</div></div><div class="collab-month-card">
+<div class="cmc-left">
+<div class="cmc-month">4月</div>
+<div class="cmc-count">尚無紀錄</div>
+</div>
+
+<div class="cmc-arrow">›</div></div><div class="collab-month-card">
+<div class="cmc-left">
+<div class="cmc-month">5月</div>
+<div class="cmc-count">尚無紀錄</div>
+</div>
+
+<div class="cmc-arrow">›</div></div><div class="collab-month-card">
+<div class="cmc-left">
+<div class="cmc-month">6月</div>
+<div class="cmc-count">2筆合作</div>
+</div>
+<div class="cmc-right"><div class="cmc-total">NT$ 44</div></div>
+<div class="cmc-arrow">›</div></div><div class="collab-month-card">
+<div class="cmc-left">
+<div class="cmc-month">7月</div>
+<div class="cmc-count">尚無紀錄</div>
+</div>
+
+<div class="cmc-arrow">›</div></div><div class="collab-month-card">
+<div class="cmc-left">
+<div class="cmc-month">8月</div>
+<div class="cmc-count">尚無紀錄</div>
+</div>
+
+<div class="cmc-arrow">›</div></div><div class="collab-month-card">
+<div class="cmc-left">
+<div class="cmc-month">9月</div>
+<div class="cmc-count">尚無紀錄</div>
+</div>
+
+<div class="cmc-arrow">›</div></div><div class="collab-month-card">
+<div class="cmc-left">
+<div class="cmc-month">10月</div>
+<div class="cmc-count">尚無紀錄</div>
+</div>
+
+<div class="cmc-arrow">›</div></div><div class="collab-month-card">
+<div class="cmc-left">
+<div class="cmc-month">11月</div>
+<div class="cmc-count">尚無紀錄</div>
+</div>
+
+<div class="cmc-arrow">›</div></div><div class="collab-month-card">
+<div class="cmc-left">
+<div class="cmc-month">12月</div>
+<div class="cmc-count">尚無紀錄</div>
+</div>
+
+<div class="cmc-arrow">›</div></div></div></div>
 </div>
 </div>
 </div>
@@ -878,13 +966,33 @@ tbody td{padding:.68rem .85rem;font-size:.84rem;color:var(--soft);}
 <div id="collab-detail-page" class="page">
 <div class="top-bar">
 <div class="top-back" onclick="goTo('profit-page');switchProfit(null,'collab')">←</div>
-<div class="top-title" id="collab-detail-title">合作紀錄</div>
-<div class="top-badge" id="collab-detail-badge"></div>
+<div class="top-title" id="collab-detail-title">6月 合作紀錄</div>
+<div class="top-badge" id="collab-detail-badge">2026 年</div>
 </div>
 <div class="inner-body">
-<div id="collab-detail-stat"></div>
+<div id="collab-detail-stat">
+<div class="stat-wide" style="margin-bottom:1rem">
+<div class="sw-label">本月合作總收入</div>
+<div class="sw-val pos">NT$ 44</div>
+</div></div>
 <div class="slbl">本月合作廠商</div>
-<div class="collab-list" id="collab-detail-list"></div>
+<div class="collab-list" id="collab-detail-list"><div class="collab-item">
+<div class="collab-left">
+<div class="collab-vendor">那是個</div>
+<div class="collab-meta">📅 2026/06/26</div>
+</div>
+<div class="collab-right">
+<div class="collab-amt">NT$ 22</div>
+<div class="collab-del">✕ 刪除</div>
+</div></div><div class="collab-item">
+<div class="collab-left">
+<div class="collab-vendor">好啦晚安</div>
+<div class="collab-meta">📅 2026/06/27</div>
+</div>
+<div class="collab-right">
+<div class="collab-amt">NT$ 22</div>
+<div class="collab-del">✕ 刪除</div>
+</div></div></div>
 <button class="dashed-btn" onclick="openCollabModal()" style="margin-top:1rem;">＋ 新增合作紀錄</button>
 </div>
 </div>
@@ -894,7 +1002,7 @@ tbody td{padding:.68rem .85rem;font-size:.84rem;color:var(--soft);}
 <div class="top-bar">
 <div class="top-back" onclick="goTo('dashboard')">←</div>
 <div class="top-title">🐻 團隊年度業績</div>
-<div class="top-badge" id="perf-badge"></div>
+<div class="top-badge" id="perf-badge">2026 年</div>
 </div>
 <div class="inner-body">
 <div class="tab-row">
@@ -911,7 +1019,7 @@ tbody td{padding:.68rem .85rem;font-size:.84rem;color:var(--soft);}
 <div class="top-bar">
 <div class="top-back" onclick="goTo('dashboard')">←</div>
 <div class="top-title">直屬團隊人數</div>
-<div class="top-badge" id="team-badge"></div>
+<div class="top-badge" id="team-badge">2026 年</div>
 </div>
 <div class="inner-body">
 <div class="stat-grid two">
@@ -932,7 +1040,7 @@ tbody td{padding:.68rem .85rem;font-size:.84rem;color:var(--soft);}
 <div class="top-bar">
 <div class="top-back" onclick="goTo('dashboard')">←</div>
 <div class="top-title">各級別人數統計</div>
-<div class="top-badge" id="upgrade-badge"></div>
+<div class="top-badge" id="upgrade-badge">2026 年</div>
 </div>
 <div class="inner-body">
 <div class="slbl">選擇級別</div>
@@ -945,7 +1053,7 @@ tbody td{padding:.68rem .85rem;font-size:.84rem;color:var(--soft);}
 <div class="top-bar">
 <div class="top-back" onclick="goTo('upgrade-page')">←</div>
 <div class="top-title" id="rank-detail-title"></div>
-<div class="top-badge" id="rank-detail-badge"></div>
+<div class="top-badge" id="rank-detail-badge">2026 年</div>
 </div>
 <div class="inner-body" id="rank-detail-body"></div>
 </div>
@@ -999,6 +1107,7 @@ function goTo(id){
 document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
 document.getElementById(id).classList.add('active');
 window.scrollTo(0,0);
+saveToStorage();
 }
 function setBadge(ids){ids.forEach(k=>{const e=document.getElementById(k);if(e)e.textContent=activeYear+' 年';});}
 function openYear(y){
@@ -1048,29 +1157,72 @@ years.push(v);initYear(v);closeModal();renderYears();
 document.getElementById('modal-inp').addEventListener('keydown',e=>{if(e.key==='Enter')confirmAdd();});
 
 // ── MODAL: collab ──
+// ── CALENDAR ──
+let calYear=new Date().getFullYear(),calMonth=new Date().getMonth(),calSelected=null;
+function toggleCalendar(){
+const p=document.getElementById('cal-popup');
+p.style.display=p.style.display==='none'?'block':'none';
+if(p.style.display==='block')renderCalendar();
+}
+function calPrev(){calMonth--;if(calMonth<0){calMonth=11;calYear--;}renderCalendar();}
+function calNext(){calMonth++;if(calMonth>11){calMonth=0;calYear++;}renderCalendar();}
+function renderCalendar(){
+const mNames=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+document.getElementById('cal-header').textContent=calYear+'年 '+mNames[calMonth];
+const grid=document.getElementById('cal-days');grid.innerHTML='';
+const first=new Date(calYear,calMonth,1).getDay();
+const days=new Date(calYear,calMonth+1,0).getDate();
+const today=new Date();
+for(let i=0;i<first;i++){grid.appendChild(document.createElement('div'));}
+for(let d=1;d<=days;d++){
+const btn=document.createElement('div');
+const isSel=calSelected&&calSelected.y===calYear&&calSelected.m===calMonth&&calSelected.d===d;
+const isTod=today.getDate()===d&&today.getMonth()===calMonth&&today.getFullYear()===calYear;
+btn.textContent=d;
+btn.style.cssText='padding:.42rem .2rem;border-radius:50%;font-size:.85rem;cursor:pointer;text-align:center;'+(isSel?'background:var(--gold);color:white;font-weight:700;':isTod?'background:var(--gold-pale);color:var(--accent);font-weight:600;':'color:var(--ink);');
+btn.addEventListener('click',()=>{
+calSelected={y:calYear,m:calMonth,d};
+const ds=String(d).padStart(2,'0'),ms=String(calMonth+1).padStart(2,'0');
+document.getElementById('c-date-text').textContent=calYear+'/'+ms+'/'+ds;
+document.getElementById('c-date-text').style.color='var(--ink)';
+document.getElementById('cal-popup').style.display='none';
+});
+grid.appendChild(btn);
+}
+}
+
 function openCollabModal(){
 const now=new Date();
-const today=`${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')}`;
-document.getElementById('c-date').value=today;
+calYear=now.getFullYear();calMonth=now.getMonth();
+calSelected={y:calYear,m:calMonth,d:now.getDate()};
+const ds=String(now.getDate()).padStart(2,'0'),ms=String(now.getMonth()+1).padStart(2,'0');
+document.getElementById('c-date-text').textContent=calYear+'/'+ms+'/'+ds;
+document.getElementById('c-date-text').style.color='var(--ink)';
+document.getElementById('cal-popup').style.display='none';
 document.getElementById('c-vendor').value='';
 document.getElementById('c-amt').value='';
 document.getElementById('c-note').value='';
 document.getElementById('collab-modal').classList.add('open');
-setTimeout(()=>document.getElementById('c-vendor').focus(),100);
+setTimeout(()=>document.getElementById('c-vendor').focus(),300);
 }
 function closeCollabModal(){document.getElementById('collab-modal').classList.remove('open');}
 function confirmCollab(){
-const date=document.getElementById('c-date').value;
 const vendor=document.getElementById('c-vendor').value.trim();
 const amt=parseFloat(document.getElementById('c-amt').value)||0;
 const note=document.getElementById('c-note').value.trim();
 if(!vendor){alert('請輸入廠商名稱');return;}
+let date='';
+if(calSelected){
+const ds=String(calSelected.d).padStart(2,'0'),ms=String(calSelected.m+1).padStart(2,'0');
+date=calSelected.y+'/'+ms+'/'+ds;
+}
 YD[activeYear].profit.collab.push({date,vendor,amt,note});
 YD[activeYear].profit.collab.sort((a,b)=>(a.date||'').localeCompare(b.date||''));
 closeCollabModal();
 renderCollabDetail();
 renderCollabMonthList();
 renderProfitAnnualBox();
+saveToStorage();
 }
 
 // ── EXPORT / IMPORT ──
@@ -1297,21 +1449,24 @@ renderCollabDetail();
 
 function renderCollabDetail(){
 const data=YD[activeYear].profit.collab;
-const monthData=data.filter(r=>{
-if(!r.date)return false;
+const monthData=data.reduce((arr,r,idx)=>{
+if(!r.date)return arr;
 const parts=r.date.replace(/\//g,'-').split('-');
-return parts.length>=2&&parseInt(parts[1])-1===activeCollabMonth;
-});
-const total=monthData.reduce((s,r)=>s+(r.amt||0),0);
+if(parts.length>=2&&parseInt(parts[1])-1===activeCollabMonth) arr.push({r,idx});
+return arr;
+},[]);
+const total=monthData.reduce((s,{r})=>s+(r.amt||0),0);
 document.getElementById('collab-detail-stat').innerHTML=`
 <div class="stat-wide" style="margin-bottom:1rem">
 <div class="sw-label">本月合作總收入</div>
 <div class="sw-val pos">${total?'NT$ '+total.toLocaleString():'—'}</div>
 </div>`;
 const listEl=document.getElementById('collab-detail-list');listEl.innerHTML='';
-if(!monthData.length){listEl.innerHTML='<div style="text-align:center;color:var(--muted);font-size:.82rem;padding:1.8rem 1rem">🐻 本月尚無合作紀錄</div>';return;}
-monthData.forEach(r=>{
-const globalIdx=data.indexOf(r);
+if(!monthData.length){
+listEl.innerHTML='<div style="text-align:center;color:var(--muted);font-size:.82rem;padding:1.8rem 1rem">🐻 本月尚無合作紀錄</div>';
+return;
+}
+monthData.forEach(({r,idx})=>{
 const div=document.createElement('div');div.className='collab-item';
 div.innerHTML=`
 <div class="collab-left">
@@ -1322,16 +1477,14 @@ div.innerHTML=`
 <div class="collab-amt">NT$ ${(r.amt||0).toLocaleString()}</div>
 <div class="collab-del">✕ 刪除</div>
 </div>`;
-div.querySelector('.collab-del').addEventListener('click',(function(idx){
-return function(e){
-e.stopPropagation();
+div.querySelector('.collab-del').addEventListener('click',function(){
 if(!confirm('確定要刪除「'+(data[idx].vendor||'此紀錄')+'」嗎？'))return;
 data.splice(idx,1);
 renderCollabDetail();
 renderCollabMonthList();
 renderProfitAnnualBox();
-};
-})(globalIdx));
+saveToStorage();
+});
 listEl.appendChild(div);
 });
 }
@@ -1488,16 +1641,16 @@ body.appendChild(tbl);
 
 // ── COPY SOURCE CODE ──
 function copySourceCode(){
-const code=document.documentElement.outerHTML;
+const code = document.documentElement.outerHTML;
 navigator.clipboard.writeText(code).then(()=>{
 showToast('✅ 程式碼已複製！');
 }).catch(()=>{
-// fallback
 const ta=document.createElement('textarea');
-ta.value=code;ta.style.position='fixed';ta.style.opacity='0';
+ta.value=code;ta.style.cssText='position:fixed;opacity:0;top:0;left:0;';
 document.body.appendChild(ta);ta.select();
-document.execCommand('copy');document.body.removeChild(ta);
-showToast('✅ 程式碼已複製！');
+try{document.execCommand('copy');showToast('✅ 程式碼已複製！');}
+catch{showToast('❌ 複製失敗，請改用分享');}
+document.body.removeChild(ta);
 });
 }
 function showToast(msg){
@@ -1507,11 +1660,45 @@ t.textContent=msg;t.classList.add('show');
 setTimeout(()=>t.classList.remove('show'),2200);
 }
 
+// ── LOCALSTORAGE 自動儲存 ──
+const STORAGE_KEY = 'more_annual_review_v1';
+
+function saveToStorage(){
+try{
+localStorage.setItem(STORAGE_KEY, JSON.stringify({years, YD}));
+}catch(e){ console.warn('儲存失敗', e); }
+}
+
+function loadFromStorage(){
+try{
+const raw = localStorage.getItem(STORAGE_KEY);
+if(!raw) return false;
+const data = JSON.parse(raw);
+if(data.years && data.YD){
+Object.assign(YD, data.YD);
+data.years.forEach(y=>{ if(!years.includes(y)) years.push(y); });
+return true;
+}
+}catch(e){ console.warn('讀取失敗', e); }
+return false;
+}
+
+// 任何輸入框失焦都自動存檔
+document.addEventListener('blur', function(e){
+if(e.target && e.target.classList.contains('ed')){
+saveToStorage();
+}
+}, true);
+
 // ── INIT ──
-initYear(TODAY_YEAR);
+loadFromStorage();
+if(!years.length) years = [TODAY_YEAR];
+years.forEach(y => initYear(y));
 renderYears();
+saveToStorage();
 // 確保每次開啟都從首頁開始
-goTo('home');
+document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+document.getElementById('home').classList.add('active');
 </script>
 
 
