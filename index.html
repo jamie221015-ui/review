@@ -654,20 +654,20 @@ tbody td{padding:.68rem .85rem;font-size:.84rem;color:var(--soft);}
 <label>合作日期</label>
 <!-- Custom calendar trigger -->
 <div id="c-date-display" onclick="toggleCalendar()" class="modal-inp" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;">
-<span id="c-date-text" style="color: var(--ink);">2026/06/26</span>
+<span id="c-date-text">點選選擇日期</span>
 <span style="color:var(--muted);">📅</span>
 </div>
 <!-- Calendar popup -->
-<div id="cal-popup" style="display: none; background: var(--card); border: 1px solid var(--border); border-radius: 14px; margin-top: 0.5rem; padding: 1rem; overflow: hidden;">
+<div id="cal-popup" style="display:none;background:var(--card);border:1px solid var(--border);border-radius:14px;margin-top:.5rem;padding:1rem;overflow:hidden;">
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.8rem;">
 <button onclick="calPrev()" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--ink);padding:.2rem .5rem;">‹</button>
-<span id="cal-header" style="font-weight:600;font-size:.9rem;color:var(--ink);">2026年 4月</span>
+<span id="cal-header" style="font-weight:600;font-size:.9rem;color:var(--ink);"></span>
 <button onclick="calNext()" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--ink);padding:.2rem .5rem;">›</button>
 </div>
 <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;margin-bottom:.4rem;">
 <div style="font-size:.65rem;color:var(--muted);">日</div><div style="font-size:.65rem;color:var(--muted);">一</div><div style="font-size:.65rem;color:var(--muted);">二</div><div style="font-size:.65rem;color:var(--muted);">三</div><div style="font-size:.65rem;color:var(--muted);">四</div><div style="font-size:.65rem;color:var(--muted);">五</div><div style="font-size:.65rem;color:var(--muted);">六</div>
 </div>
-<div id="cal-days" style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;text-align:center;"><div></div><div></div><div></div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">1</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">2</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">3</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">4</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">5</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">6</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">7</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">8</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">9</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">10</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">11</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">12</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">13</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">14</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">15</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">16</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">17</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">18</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">19</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">20</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">21</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">22</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">23</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">24</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">25</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">26</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">27</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">28</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">29</div><div style="padding: 0.42rem 0.2rem; border-radius: 50%; font-size: 0.85rem; cursor: pointer; text-align: center; color: var(--ink);">30</div></div>
+<div id="cal-days" style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;text-align:center;"></div>
 </div>
 </div>
 <div class="modal-field">
@@ -802,27 +802,27 @@ tbody td{padding:.68rem .85rem;font-size:.84rem;color:var(--soft);}
 </div>
 </div>
 <div class="dash-body">
-<div class="dash-card" style="--i: 1;" onclick="goInner('fans-page')">
+<div class="dash-card" style="--i:1" onclick="goInner('fans-page')">
 <div class="dc-icon">📊</div>
 <div class="dc-info"><div class="dc-title">粉絲復盤表</div><div class="dc-desc">IG · 臉書 · 抖音 · 小紅書 · Threads</div></div>
 <div class="dc-arrow">›</div>
 </div>
-<div class="dash-card" style="--i: 2;" onclick="goInner('profit-page')">
+<div class="dash-card" style="--i:2" onclick="goInner('profit-page')">
 <div class="dc-icon">💰</div>
 <div class="dc-info"><div class="dc-title">淨利記錄表</div><div class="dc-desc">客人 · 夥伴 · 合作 淨利</div></div>
 <div class="dc-arrow">›</div>
 </div>
-<div class="dash-card" style="--i: 3;" onclick="goInner('perf-page')">
+<div class="dash-card" style="--i:3" onclick="goInner('perf-page')">
 <div class="dc-icon">💎</div>
 <div class="dc-info"><div class="dc-title">團隊年度業績</div><div class="dc-desc">總合 · 自己業績 · 直屬皇家業績</div></div>
 <div class="dc-arrow">›</div>
 </div>
-<div class="dash-card" style="--i: 4;" onclick="goInner('team-page')">
+<div class="dash-card" style="--i:4" onclick="goInner('team-page')">
 <div class="dc-icon">👥</div>
 <div class="dc-info"><div class="dc-title">直屬團隊人數</div><div class="dc-desc">成員名單 · 月度人數統計</div></div>
 <div class="dc-arrow">›</div>
 </div>
-<div class="dash-card" style="--i: 5;" onclick="goInner('upgrade-page')">
+<div class="dash-card" style="--i:5" onclick="goInner('upgrade-page')">
 <div class="dc-icon">📈</div>
 <div class="dc-info"><div class="dc-title">各級別人數統計</div><div class="dc-desc">總覽圖表 · 實習 · 三級 · 二級 · 一級 · 皇家</div></div>
 <div class="dc-arrow">›</div>
@@ -835,7 +835,7 @@ tbody td{padding:.68rem .85rem;font-size:.84rem;color:var(--soft);}
 <div class="top-bar">
 <div class="top-back" onclick="goTo('dashboard')">←</div>
 <div class="top-title">粉絲復盤表</div>
-<div class="top-badge" id="fans-badge">2026 年</div>
+<div class="top-badge" id="fans-badge"></div>
 </div>
 <div class="inner-body">
 <div class="slbl">選擇平台</div>
@@ -848,7 +848,7 @@ tbody td{padding:.68rem .85rem;font-size:.84rem;color:var(--soft);}
 <div class="top-bar">
 <div class="top-back" onclick="goTo('fans-page')">←</div>
 <div class="top-title" id="fans-detail-title">IG</div>
-<div class="top-badge" id="fans-detail-badge">2026 年</div>
+<div class="top-badge" id="fans-detail-badge"></div>
 </div>
 <div class="inner-body">
 <div class="stat-grid" id="fans-stats"></div>
@@ -865,99 +865,33 @@ tbody td{padding:.68rem .85rem;font-size:.84rem;color:var(--soft);}
 <div class="top-bar">
 <div class="top-back" onclick="goTo('dashboard')">←</div>
 <div class="top-title">🐻 淨利記錄表</div>
-<div class="top-badge" id="profit-badge">2026 年</div>
+<div class="top-badge" id="profit-badge"></div>
 </div>
 <div class="inner-body">
 <div class="tab-row">
+<div class="tab-pill active" onclick="switchProfit(event,'total')">🐻 總合</div>
 <div class="tab-pill" onclick="switchProfit(event,'client')">🐻 客人</div>
 <div class="tab-pill" onclick="switchProfit(event,'partner')">🐻 夥伴</div>
-<div class="tab-pill active" onclick="switchProfit(event,'collab')">🐻 合作</div>
+<div class="tab-pill" onclick="switchProfit(event,'collab')">🐻 合作</div>
 </div>
-<div id="profit-annual-box"><div class="stat-wide"><div class="sw-label">年度合作總收入</div><div class="sw-val pos">NT$ 66</div></div></div>
+<div id="profit-annual-box"></div>
+<!-- total -->
+<div id="profit-total-wrap" style="display:none">
+<div class="slbl">每月總淨利（客人＋夥伴＋合作）</div>
+<div id="profit-total-list" style="background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;"></div>
+</div>
 <!-- client/partner -->
-<div id="profit-table-wrap" style="display: none;">
-<div class="slbl" id="profit-lbl">客人 · 月度淨利</div>
+<div id="profit-table-wrap" style="display:none">
+<div class="slbl" id="profit-lbl"></div>
 <table>
 <thead><tr><th>月份</th><th>淨利</th><th>備註</th></tr></thead>
-<tbody id="profit-tbody"><tr><td>1月</td><td><span class="ed" contenteditable="true"></span></td><td><span class="ed" contenteditable="true"></span></td></tr><tr><td>2月</td><td><span class="ed" contenteditable="true"></span></td><td><span class="ed" contenteditable="true"></span></td></tr><tr><td>3月</td><td><span class="ed" contenteditable="true"></span></td><td><span class="ed" contenteditable="true"></span></td></tr><tr><td>4月</td><td><span class="ed" contenteditable="true"></span></td><td><span class="ed" contenteditable="true"></span></td></tr><tr><td>5月</td><td><span class="ed" contenteditable="true"></span></td><td><span class="ed" contenteditable="true"></span></td></tr><tr><td>6月</td><td><span class="ed" contenteditable="true"></span></td><td><span class="ed" contenteditable="true"></span></td></tr><tr><td>7月</td><td><span class="ed" contenteditable="true"></span></td><td><span class="ed" contenteditable="true"></span></td></tr><tr><td>8月</td><td><span class="ed" contenteditable="true"></span></td><td><span class="ed" contenteditable="true"></span></td></tr><tr><td>9月</td><td><span class="ed" contenteditable="true"></span></td><td><span class="ed" contenteditable="true"></span></td></tr><tr><td>10月</td><td><span class="ed" contenteditable="true"></span></td><td><span class="ed" contenteditable="true"></span></td></tr><tr><td>11月</td><td><span class="ed" contenteditable="true"></span></td><td><span class="ed" contenteditable="true"></span></td></tr><tr><td>12月</td><td><span class="ed" contenteditable="true"></span></td><td><span class="ed" contenteditable="true"></span></td></tr></tbody>
+<tbody id="profit-tbody"></tbody>
 </table>
 </div>
 <!-- collab -->
-<div id="profit-collab-wrap" style="display: block;">
+<div id="profit-collab-wrap" style="display:none">
 <div class="slbl">選擇月份</div>
-<div id="collab-month-list"><div class="collab-month-list"><div class="collab-month-card">
-<div class="cmc-left">
-<div class="cmc-month">1月</div>
-<div class="cmc-count">1筆合作</div>
-</div>
-<div class="cmc-right"><div class="cmc-total">NT$ 22</div></div>
-<div class="cmc-arrow">›</div></div><div class="collab-month-card">
-<div class="cmc-left">
-<div class="cmc-month">2月</div>
-<div class="cmc-count">尚無紀錄</div>
-</div>
-
-<div class="cmc-arrow">›</div></div><div class="collab-month-card">
-<div class="cmc-left">
-<div class="cmc-month">3月</div>
-<div class="cmc-count">尚無紀錄</div>
-</div>
-
-<div class="cmc-arrow">›</div></div><div class="collab-month-card">
-<div class="cmc-left">
-<div class="cmc-month">4月</div>
-<div class="cmc-count">尚無紀錄</div>
-</div>
-
-<div class="cmc-arrow">›</div></div><div class="collab-month-card">
-<div class="cmc-left">
-<div class="cmc-month">5月</div>
-<div class="cmc-count">尚無紀錄</div>
-</div>
-
-<div class="cmc-arrow">›</div></div><div class="collab-month-card">
-<div class="cmc-left">
-<div class="cmc-month">6月</div>
-<div class="cmc-count">2筆合作</div>
-</div>
-<div class="cmc-right"><div class="cmc-total">NT$ 44</div></div>
-<div class="cmc-arrow">›</div></div><div class="collab-month-card">
-<div class="cmc-left">
-<div class="cmc-month">7月</div>
-<div class="cmc-count">尚無紀錄</div>
-</div>
-
-<div class="cmc-arrow">›</div></div><div class="collab-month-card">
-<div class="cmc-left">
-<div class="cmc-month">8月</div>
-<div class="cmc-count">尚無紀錄</div>
-</div>
-
-<div class="cmc-arrow">›</div></div><div class="collab-month-card">
-<div class="cmc-left">
-<div class="cmc-month">9月</div>
-<div class="cmc-count">尚無紀錄</div>
-</div>
-
-<div class="cmc-arrow">›</div></div><div class="collab-month-card">
-<div class="cmc-left">
-<div class="cmc-month">10月</div>
-<div class="cmc-count">尚無紀錄</div>
-</div>
-
-<div class="cmc-arrow">›</div></div><div class="collab-month-card">
-<div class="cmc-left">
-<div class="cmc-month">11月</div>
-<div class="cmc-count">尚無紀錄</div>
-</div>
-
-<div class="cmc-arrow">›</div></div><div class="collab-month-card">
-<div class="cmc-left">
-<div class="cmc-month">12月</div>
-<div class="cmc-count">尚無紀錄</div>
-</div>
-
-<div class="cmc-arrow">›</div></div></div></div>
+<div id="collab-month-list"></div>
 </div>
 </div>
 </div>
@@ -966,33 +900,13 @@ tbody td{padding:.68rem .85rem;font-size:.84rem;color:var(--soft);}
 <div id="collab-detail-page" class="page">
 <div class="top-bar">
 <div class="top-back" onclick="goTo('profit-page');switchProfit(null,'collab')">←</div>
-<div class="top-title" id="collab-detail-title">6月 合作紀錄</div>
-<div class="top-badge" id="collab-detail-badge">2026 年</div>
+<div class="top-title" id="collab-detail-title">合作紀錄</div>
+<div class="top-badge" id="collab-detail-badge"></div>
 </div>
 <div class="inner-body">
-<div id="collab-detail-stat">
-<div class="stat-wide" style="margin-bottom:1rem">
-<div class="sw-label">本月合作總收入</div>
-<div class="sw-val pos">NT$ 44</div>
-</div></div>
+<div id="collab-detail-stat"></div>
 <div class="slbl">本月合作廠商</div>
-<div class="collab-list" id="collab-detail-list"><div class="collab-item">
-<div class="collab-left">
-<div class="collab-vendor">那是個</div>
-<div class="collab-meta">📅 2026/06/26</div>
-</div>
-<div class="collab-right">
-<div class="collab-amt">NT$ 22</div>
-<div class="collab-del">✕ 刪除</div>
-</div></div><div class="collab-item">
-<div class="collab-left">
-<div class="collab-vendor">好啦晚安</div>
-<div class="collab-meta">📅 2026/06/27</div>
-</div>
-<div class="collab-right">
-<div class="collab-amt">NT$ 22</div>
-<div class="collab-del">✕ 刪除</div>
-</div></div></div>
+<div class="collab-list" id="collab-detail-list"></div>
 <button class="dashed-btn" onclick="openCollabModal()" style="margin-top:1rem;">＋ 新增合作紀錄</button>
 </div>
 </div>
@@ -1002,7 +916,7 @@ tbody td{padding:.68rem .85rem;font-size:.84rem;color:var(--soft);}
 <div class="top-bar">
 <div class="top-back" onclick="goTo('dashboard')">←</div>
 <div class="top-title">🐻 團隊年度業績</div>
-<div class="top-badge" id="perf-badge">2026 年</div>
+<div class="top-badge" id="perf-badge"></div>
 </div>
 <div class="inner-body">
 <div class="tab-row">
@@ -1019,7 +933,7 @@ tbody td{padding:.68rem .85rem;font-size:.84rem;color:var(--soft);}
 <div class="top-bar">
 <div class="top-back" onclick="goTo('dashboard')">←</div>
 <div class="top-title">直屬團隊人數</div>
-<div class="top-badge" id="team-badge">2026 年</div>
+<div class="top-badge" id="team-badge"></div>
 </div>
 <div class="inner-body">
 <div class="stat-grid two">
@@ -1040,7 +954,7 @@ tbody td{padding:.68rem .85rem;font-size:.84rem;color:var(--soft);}
 <div class="top-bar">
 <div class="top-back" onclick="goTo('dashboard')">←</div>
 <div class="top-title">各級別人數統計</div>
-<div class="top-badge" id="upgrade-badge">2026 年</div>
+<div class="top-badge" id="upgrade-badge"></div>
 </div>
 <div class="inner-body">
 <div class="slbl">選擇級別</div>
@@ -1053,7 +967,7 @@ tbody td{padding:.68rem .85rem;font-size:.84rem;color:var(--soft);}
 <div class="top-bar">
 <div class="top-back" onclick="goTo('upgrade-page')">←</div>
 <div class="top-title" id="rank-detail-title"></div>
-<div class="top-badge" id="rank-detail-badge">2026 年</div>
+<div class="top-badge" id="rank-detail-badge"></div>
 </div>
 <div class="inner-body" id="rank-detail-body"></div>
 </div>
@@ -1080,7 +994,7 @@ const RANKS=['intern','r3','r3c','r2','r1','royal'];
 const RANK_LABELS={intern:'實習',r3:'三級',r3c:'三級輔導',r2:'二級',r1:'一級',royal:'皇家'};
 const TODAY_YEAR=new Date().getFullYear();
 
-let years=[TODAY_YEAR],activeYear=TODAY_YEAR,fansPlatform='ig',profitType='client',perfType='summary';
+let years=[TODAY_YEAR],activeYear=TODAY_YEAR,fansPlatform='ig',profitType='total',perfType='summary';
 const YD={};
 
 function initYear(y){
@@ -1383,6 +1297,12 @@ const box=document.getElementById('profit-annual-box');
 if(profitType==='collab'){
 const total=YD[activeYear].profit.collab.reduce((s,r)=>s+(r.amt||0),0);
 box.innerHTML=`<div class="stat-wide"><div class="sw-label">年度合作總收入</div><div class="sw-val pos">${total?'NT$ '+total.toLocaleString():'—'}</div></div>`;
+}else if(profitType==='total'){
+const c=YD[activeYear].profit.client.reduce((s,r)=>s+(parseFloat(r.profit)||0),0);
+const p=YD[activeYear].profit.partner.reduce((s,r)=>s+(parseFloat(r.profit)||0),0);
+const col=YD[activeYear].profit.collab.reduce((s,r)=>s+(r.amt||0),0);
+const t=c+p+col;
+box.innerHTML=`<div class="stat-wide"><div class="sw-label">年度三項總淨利</div><div class="sw-val pos">${t?'NT$ '+t.toLocaleString():'—'}</div></div>`;
 }else{
 const data=YD[activeYear].profit[profitType];
 const total=data.reduce((s,r)=>s+(parseFloat(r.profit)||0),0);
@@ -1392,12 +1312,37 @@ box.innerHTML=`<div class="stat-wide"><div class="sw-label">年度總淨利</div
 function switchProfit(e,type){
 profitType=type;
 document.querySelectorAll('#profit-page .tab-pill').forEach(t=>t.classList.remove('active'));
-document.querySelectorAll('#profit-page .tab-pill')[{client:0,partner:1,collab:2}[type]].classList.add('active');
+document.querySelectorAll('#profit-page .tab-pill')[{total:0,client:1,partner:2,collab:3}[type]].classList.add('active');
 const isCollab=type==='collab';
-document.getElementById('profit-table-wrap').style.display=isCollab?'none':'block';
+const isTotal=type==='total';
+document.getElementById('profit-total-wrap').style.display=isTotal?'block':'none';
+document.getElementById('profit-table-wrap').style.display=(!isCollab&&!isTotal)?'block':'none';
 document.getElementById('profit-collab-wrap').style.display=isCollab?'block':'none';
 renderProfitAnnualBox();
-if(!isCollab){
+if(isTotal){
+const collabData=YD[activeYear].profit.collab;
+const collabByMonth=Array(12).fill(0);
+collabData.forEach(r=>{
+if(r.date){const parts=r.date.replace(/\//g,'-').split('-');if(parts.length>=2){const m=parseInt(parts[1])-1;if(m>=0&&m<12)collabByMonth[m]+=r.amt||0;}}
+});
+const listEl=document.getElementById('profit-total-list');listEl.innerHTML='';
+MONTHS.forEach((m,i)=>{
+const c=parseFloat(YD[activeYear].profit.client[i].profit)||0;
+const p=parseFloat(YD[activeYear].profit.partner[i].profit)||0;
+const col=collabByMonth[i];
+const sum=c+p+col;
+const row=document.createElement('div');
+row.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:.9rem 1.2rem;border-bottom:1px solid var(--border);';
+row.innerHTML=`
+<div style="font-size:.9rem;color:var(--ink);font-weight:500;">${m}</div>
+<div style="font-family:\'Playfair Display\',serif;font-size:1.3rem;font-weight:700;color:${sum?'var(--green)':'var(--muted)'};">${sum?'NT$ '+sum.toLocaleString():'—'}</div>
+`;
+listEl.appendChild(row);
+});
+// remove last border
+const rows=listEl.querySelectorAll('div');
+if(rows.length) rows[rows.length-1].style.borderBottom='none';
+}else if(!isCollab){
 const data=YD[activeYear].profit[type];
 document.getElementById('profit-lbl').textContent={client:'客人',partner:'夥伴'}[type]+' · 月度淨利';
 const tbody=document.getElementById('profit-tbody');tbody.innerHTML='';
@@ -1406,7 +1351,7 @@ const r=data[i];
 const tr=document.createElement('tr');
 tr.innerHTML=`<td>${m}</td><td><span class="ed" contenteditable="true">${r.profit}</span></td><td><span class="ed" contenteditable="true">${r.note||''}</span></td>`;
 const cells=tr.querySelectorAll('.ed');
-['profit','note'].forEach((f,fi)=>cells[fi].addEventListener('blur',()=>{data[i][f]=cells[fi].textContent.trim();renderProfitAnnualBox();}));
+['profit','note'].forEach((f,fi)=>cells[fi].addEventListener('blur',()=>{data[i][f]=cells[fi].textContent.trim();renderProfitAnnualBox();saveToStorage();}));
 tbody.appendChild(tr);
 });
 }else{
